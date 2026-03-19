@@ -11,6 +11,7 @@
 #include <QRectF>
 #include <QString>
 #include <QStringList>
+#include <QJsonObject>
 #include <QVector>
 
 #include "document/AnnotationModel.h"
@@ -69,6 +70,9 @@ public:
     bool hasSelectedTextEditAnnotation() const;
     QString selectedTextEditText() const;
     bool hasSelectedSignatureAnnotation() const;
+    bool hasSelectedMovableAnnotation() const;
+    bool canUndo() const;
+    bool canRedo() const;
     QPixmap thumbnailForPage(int pageIndex, const QSize &targetSize);
     void setThumbnailSize(const QSize &size);
 
@@ -93,11 +97,17 @@ public slots:
     void replaceSelectedText(const QString &text);
     void addSignatureFromImageAt(const QPointF &imagePoint, const QImage &signatureImage);
     void addSignatureFromImageToSelection(const QImage &signatureImage);
+    void moveSelectedSignatureBy(const QPointF &imageDelta);
+    void resizeSelectedTextEditBy(const QPointF &imageDelta);
+    bool remapPageOrder(const QVector<int> &newOrder);
     void selectOverlayAt(const QPointF &imagePoint);
     void deleteSelectedOverlay();
     void setSelectedAnnotationColor(const QColor &color);
     void updateSelectedNoteText(const QString &text);
     void updateSelectedTextEdit(const QString &text);
+    void saveDocumentState();
+    void undo();
+    void redo();
 
     void setSearchQuery(const QString &query);
     void findNext();
@@ -128,11 +138,17 @@ signals:
     void statusMessageChanged(const QString &message);
     void busyStateChanged(bool busy, const QString &message);
     void ocrFinished(const QString &title, const QString &text);
+    void historyStateChanged(bool canUndo, bool canRedo);
 
 private:
     QString annotationSidecarPath() const;
     void loadSidecarState();
     void saveSidecarState() const;
+    QJsonObject currentDocumentState() const;
+    void restoreDocumentState(const QJsonObject &state);
+    void resetHistory();
+    void recordHistorySnapshot();
+    void updateHistoryState();
     void resetDocumentState();
     void clearSelectionInternal(bool emitSignal);
     QRectF imageRectToPageRect(const QRectF &imageRect) const;
@@ -154,6 +170,7 @@ private:
     AnnotationModel m_annotationModel;
     FormFieldModel m_formFieldModel;
     RedactionModel m_redactionModel;
+    QVector<PdfFormField> m_baseFormFields;
     std::unique_ptr<PageThumbnailProvider> m_thumbnailProvider;
     QImage m_currentPageImage;
     QString m_lastError;
@@ -163,4 +180,6 @@ private:
     double m_zoomFactor {1.0};
     QByteArray m_currentOwnerPassword;
     QByteArray m_currentUserPassword;
+    QVector<QJsonObject> m_historySnapshots;
+    int m_historyIndex {-1};
 };

@@ -82,6 +82,26 @@ bool RedactionModel::hasSelectedRedaction() const
     return !selectedRedactionId().isEmpty();
 }
 
+bool RedactionModel::remapPages(const QVector<int> &newOrder)
+{
+    QVector<PdfRedaction> remappedRedactions;
+    remappedRedactions.reserve(m_redactions.size());
+
+    for (const PdfRedaction &redaction : std::as_const(m_redactions)) {
+        const int newPageIndex = newOrder.indexOf(redaction.pageIndex);
+        if (newPageIndex < 0) {
+            continue;
+        }
+
+        PdfRedaction remapped = redaction;
+        remapped.pageIndex = newPageIndex;
+        remappedRedactions.append(remapped);
+    }
+
+    m_redactions = remappedRedactions;
+    return true;
+}
+
 QVector<PdfRedaction> RedactionModel::redactionsForPage(int pageIndex) const
 {
     QVector<PdfRedaction> redactions;

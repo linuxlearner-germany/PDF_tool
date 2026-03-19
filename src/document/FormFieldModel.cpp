@@ -1,5 +1,7 @@
 #include "document/FormFieldModel.h"
 
+#include <QRegularExpression>
+
 #include <QJsonObject>
 
 void FormFieldModel::clear()
@@ -54,6 +56,36 @@ QString FormFieldModel::fieldIdAt(int pageIndex, const QPointF &pagePoint) const
         }
     }
     return {};
+}
+
+bool FormFieldModel::remapPages(const QVector<int> &newOrder)
+{
+    static const QRegularExpression pageIdPattern(QStringLiteral("^page_(\\d+)_field_(.+)$"));
+
+    QVector<PdfFormField> remappedFields;
+    remappedFields.reserve(m_fields.size());
+
+    for (const PdfFormField &field : std::as_const(m_fields)) {
+        const int newPageIndex = newOrder.indexOf(field.pageIndex);
+        if (newPageIndex < 0) {
+            continue;
+        }
+
+        PdfFormField remapped = field;
+        remapped.pageIndex = newPageIndex;
+
+        const QRegularExpressionMatch match = pageIdPattern.match(field.id);
+        if (match.hasMatch()) {
+            remapped.id = QStringLiteral("page_%1_field_%2")
+                              .arg(newPageIndex)
+                              .arg(match.captured(2));
+        }
+
+        remappedFields.append(remapped);
+    }
+
+    m_fields = remappedFields;
+    return true;
 }
 
 QJsonArray FormFieldModel::toJson() const

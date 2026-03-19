@@ -1,7 +1,9 @@
 #pragma once
 
+#include <QByteArray>
 #include <QString>
 #include <QStringList>
+#include <QVector>
 
 class QPdfOperations
 {
@@ -24,6 +26,16 @@ public:
         const QByteArray &userPassword,
         const QByteArray &ownerPassword,
         const QByteArray &inputPassword = QByteArray());
+    bool reorderPages(
+        const QString &inputFile,
+        const QString &outputFile,
+        const QVector<int> &pageOrder,
+        const QByteArray &password = QByteArray());
+    bool deletePages(
+        const QString &inputFile,
+        const QString &outputFile,
+        const QVector<int> &pagesToDelete,
+        const QByteArray &password = QByteArray());
 
 private:
     QString m_lastError;

@@ -79,6 +79,9 @@ static constexpr auto qt_meta_stringdata_ZN21PdfDocumentControllerE = QtMocHelpe
     "ocrFinished",
     "title",
     "text",
+    "historyStateChanged",
+    "canUndo",
+    "canRedo",
     "zoomIn",
     "zoomOut",
     "resetZoom",
@@ -100,12 +103,21 @@ static constexpr auto qt_meta_stringdata_ZN21PdfDocumentControllerE = QtMocHelpe
     "addSignatureFromImageAt",
     "signatureImage",
     "addSignatureFromImageToSelection",
+    "moveSelectedSignatureBy",
+    "imageDelta",
+    "resizeSelectedTextEditBy",
+    "remapPageOrder",
+    "QList<int>",
+    "newOrder",
     "selectOverlayAt",
     "deleteSelectedOverlay",
     "setSelectedAnnotationColor",
     "color",
     "updateSelectedNoteText",
     "updateSelectedTextEdit",
+    "saveDocumentState",
+    "undo",
+    "redo",
     "setSearchQuery",
     "query",
     "findNext",
@@ -129,63 +141,70 @@ Q_CONSTINIT static const uint qt_meta_data_ZN21PdfDocumentControllerE[] = {
       12,       // revision
        0,       // classname
        0,    0, // classinfo
-      47,   14, // methods
+      54,   14, // methods
        0,    0, // properties
        0,    0, // enums/sets
        0,    0, // constructors
        0,       // flags
-      16,       // signalCount
+      17,       // signalCount
 
  // signals: name, argc, parameters, tag, flags, initial metatype offsets
-       1,    1,  296,    2, 0x06,    1 /* Public */,
-       4,    1,  299,    2, 0x06,    3 /* Public */,
-       6,    1,  302,    2, 0x06,    5 /* Public */,
-       8,    3,  305,    2, 0x06,    7 /* Public */,
-      12,    1,  312,    2, 0x06,   11 /* Public */,
-      15,    2,  315,    2, 0x06,   13 /* Public */,
-      18,    1,  320,    2, 0x06,   16 /* Public */,
-      21,    1,  323,    2, 0x06,   18 /* Public */,
-      23,    1,  326,    2, 0x06,   20 /* Public */,
-      25,    1,  329,    2, 0x06,   22 /* Public */,
-      27,    1,  332,    2, 0x06,   24 /* Public */,
-      28,    4,  335,    2, 0x06,   26 /* Public */,
-      33,    1,  344,    2, 0x06,   31 /* Public */,
-      35,    1,  347,    2, 0x06,   33 /* Public */,
-      36,    2,  350,    2, 0x06,   35 /* Public */,
-      38,    2,  355,    2, 0x06,   38 /* Public */,
+       1,    1,  338,    2, 0x06,    1 /* Public */,
+       4,    1,  341,    2, 0x06,    3 /* Public */,
+       6,    1,  344,    2, 0x06,    5 /* Public */,
+       8,    3,  347,    2, 0x06,    7 /* Public */,
+      12,    1,  354,    2, 0x06,   11 /* Public */,
+      15,    2,  357,    2, 0x06,   13 /* Public */,
+      18,    1,  362,    2, 0x06,   16 /* Public */,
+      21,    1,  365,    2, 0x06,   18 /* Public */,
+      23,    1,  368,    2, 0x06,   20 /* Public */,
+      25,    1,  371,    2, 0x06,   22 /* Public */,
+      27,    1,  374,    2, 0x06,   24 /* Public */,
+      28,    4,  377,    2, 0x06,   26 /* Public */,
+      33,    1,  386,    2, 0x06,   31 /* Public */,
+      35,    1,  389,    2, 0x06,   33 /* Public */,
+      36,    2,  392,    2, 0x06,   35 /* Public */,
+      38,    2,  397,    2, 0x06,   38 /* Public */,
+      41,    2,  402,    2, 0x06,   41 /* Public */,
 
  // slots: name, argc, parameters, tag, flags, initial metatype offsets
-      41,    0,  360,    2, 0x0a,   41 /* Public */,
-      42,    0,  361,    2, 0x0a,   42 /* Public */,
-      43,    0,  362,    2, 0x0a,   43 /* Public */,
-      44,    1,  363,    2, 0x0a,   44 /* Public */,
-      45,    1,  366,    2, 0x0a,   46 /* Public */,
-      46,    0,  369,    2, 0x0a,   48 /* Public */,
-      47,    0,  370,    2, 0x0a,   49 /* Public */,
-      48,    1,  371,    2, 0x0a,   50 /* Public */,
-      50,    0,  374,    2, 0x0a,   52 /* Public */,
-      51,    0,  375,    2, 0x0a,   53 /* Public */,
-      52,    0,  376,    2, 0x0a,   54 /* Public */,
-      53,    0,  377,    2, 0x0a,   55 /* Public */,
-      54,    2,  378,    2, 0x0a,   56 /* Public */,
-      57,    2,  383,    2, 0x0a,   59 /* Public */,
-      58,    1,  388,    2, 0x0a,   62 /* Public */,
-      59,    2,  391,    2, 0x0a,   64 /* Public */,
-      61,    1,  396,    2, 0x0a,   67 /* Public */,
-      62,    1,  399,    2, 0x0a,   69 /* Public */,
-      63,    0,  402,    2, 0x0a,   71 /* Public */,
-      64,    1,  403,    2, 0x0a,   72 /* Public */,
-      66,    1,  406,    2, 0x0a,   74 /* Public */,
-      67,    1,  409,    2, 0x0a,   76 /* Public */,
-      68,    1,  412,    2, 0x0a,   78 /* Public */,
-      70,    0,  415,    2, 0x0a,   80 /* Public */,
-      71,    0,  416,    2, 0x0a,   81 /* Public */,
-      72,    0,  417,    2, 0x0a,   82 /* Public */,
-      73,    2,  418,    2, 0x0a,   83 /* Public */,
-      75,    2,  423,    2, 0x0a,   86 /* Public */,
-      77,    0,  428,    2, 0x0a,   89 /* Public */,
-      78,    0,  429,    2, 0x0a,   90 /* Public */,
-      79,    0,  430,    2, 0x0a,   91 /* Public */,
+      44,    0,  407,    2, 0x0a,   44 /* Public */,
+      45,    0,  408,    2, 0x0a,   45 /* Public */,
+      46,    0,  409,    2, 0x0a,   46 /* Public */,
+      47,    1,  410,    2, 0x0a,   47 /* Public */,
+      48,    1,  413,    2, 0x0a,   49 /* Public */,
+      49,    0,  416,    2, 0x0a,   51 /* Public */,
+      50,    0,  417,    2, 0x0a,   52 /* Public */,
+      51,    1,  418,    2, 0x0a,   53 /* Public */,
+      53,    0,  421,    2, 0x0a,   55 /* Public */,
+      54,    0,  422,    2, 0x0a,   56 /* Public */,
+      55,    0,  423,    2, 0x0a,   57 /* Public */,
+      56,    0,  424,    2, 0x0a,   58 /* Public */,
+      57,    2,  425,    2, 0x0a,   59 /* Public */,
+      60,    2,  430,    2, 0x0a,   62 /* Public */,
+      61,    1,  435,    2, 0x0a,   65 /* Public */,
+      62,    2,  438,    2, 0x0a,   67 /* Public */,
+      64,    1,  443,    2, 0x0a,   70 /* Public */,
+      65,    1,  446,    2, 0x0a,   72 /* Public */,
+      67,    1,  449,    2, 0x0a,   74 /* Public */,
+      68,    1,  452,    2, 0x0a,   76 /* Public */,
+      71,    1,  455,    2, 0x0a,   78 /* Public */,
+      72,    0,  458,    2, 0x0a,   80 /* Public */,
+      73,    1,  459,    2, 0x0a,   81 /* Public */,
+      75,    1,  462,    2, 0x0a,   83 /* Public */,
+      76,    1,  465,    2, 0x0a,   85 /* Public */,
+      77,    0,  468,    2, 0x0a,   87 /* Public */,
+      78,    0,  469,    2, 0x0a,   88 /* Public */,
+      79,    0,  470,    2, 0x0a,   89 /* Public */,
+      80,    1,  471,    2, 0x0a,   90 /* Public */,
+      82,    0,  474,    2, 0x0a,   92 /* Public */,
+      83,    0,  475,    2, 0x0a,   93 /* Public */,
+      84,    0,  476,    2, 0x0a,   94 /* Public */,
+      85,    2,  477,    2, 0x0a,   95 /* Public */,
+      87,    2,  482,    2, 0x0a,   98 /* Public */,
+      89,    0,  487,    2, 0x0a,  101 /* Public */,
+      90,    0,  488,    2, 0x0a,  102 /* Public */,
+      91,    0,  489,    2, 0x0a,  103 /* Public */,
 
  // signals: parameters
     QMetaType::Void, QMetaType::Bool,    3,
@@ -204,6 +223,7 @@ Q_CONSTINIT static const uint qt_meta_data_ZN21PdfDocumentControllerE[] = {
     QMetaType::Void, QMetaType::QString,   34,
     QMetaType::Void, QMetaType::Bool, QMetaType::QString,   37,   34,
     QMetaType::Void, QMetaType::QString, QMetaType::QString,   39,   40,
+    QMetaType::Void, QMetaType::Bool, QMetaType::Bool,   42,   43,
 
  // slots: parameters
     QMetaType::Void,
@@ -213,27 +233,33 @@ Q_CONSTINIT static const uint qt_meta_data_ZN21PdfDocumentControllerE[] = {
     QMetaType::Void, QMetaType::Int,    9,
     QMetaType::Void,
     QMetaType::Void,
-    QMetaType::Void, QMetaType::QRectF,   49,
+    QMetaType::Void, QMetaType::QRectF,   52,
     QMetaType::Void,
     QMetaType::Void,
     QMetaType::Void,
     QMetaType::Void,
-    QMetaType::Void, QMetaType::QPointF, QMetaType::QString,   55,   56,
-    QMetaType::Void, QMetaType::QPointF, QMetaType::QString,   55,   40,
+    QMetaType::Void, QMetaType::QPointF, QMetaType::QString,   58,   59,
+    QMetaType::Void, QMetaType::QPointF, QMetaType::QString,   58,   40,
     QMetaType::Void, QMetaType::QString,   40,
-    QMetaType::Void, QMetaType::QPointF, QMetaType::QImage,   55,   60,
-    QMetaType::Void, QMetaType::QImage,   60,
-    QMetaType::Void, QMetaType::QPointF,   55,
+    QMetaType::Void, QMetaType::QPointF, QMetaType::QImage,   58,   63,
+    QMetaType::Void, QMetaType::QImage,   63,
+    QMetaType::Void, QMetaType::QPointF,   66,
+    QMetaType::Void, QMetaType::QPointF,   66,
+    QMetaType::Bool, 0x80000000 | 69,   70,
+    QMetaType::Void, QMetaType::QPointF,   58,
     QMetaType::Void,
-    QMetaType::Void, QMetaType::QColor,   65,
+    QMetaType::Void, QMetaType::QColor,   74,
     QMetaType::Void, QMetaType::QString,   40,
     QMetaType::Void, QMetaType::QString,   40,
-    QMetaType::Void, QMetaType::QString,   69,
     QMetaType::Void,
     QMetaType::Void,
     QMetaType::Void,
-    QMetaType::Void, QMetaType::QString, QMetaType::QString,   74,   40,
-    QMetaType::Void, QMetaType::QString, QMetaType::Bool,   74,   76,
+    QMetaType::Void, QMetaType::QString,   81,
+    QMetaType::Void,
+    QMetaType::Void,
+    QMetaType::Void,
+    QMetaType::Void, QMetaType::QString, QMetaType::QString,   86,   40,
+    QMetaType::Void, QMetaType::QString, QMetaType::Bool,   86,   88,
     QMetaType::Void,
     QMetaType::Void,
     QMetaType::Void,
@@ -306,6 +332,10 @@ Q_CONSTINIT const QMetaObject PdfDocumentController::staticMetaObject = { {
         QtPrivate::TypeAndForceComplete<void, std::false_type>,
         QtPrivate::TypeAndForceComplete<const QString &, std::false_type>,
         QtPrivate::TypeAndForceComplete<const QString &, std::false_type>,
+        // method 'historyStateChanged'
+        QtPrivate::TypeAndForceComplete<void, std::false_type>,
+        QtPrivate::TypeAndForceComplete<bool, std::false_type>,
+        QtPrivate::TypeAndForceComplete<bool, std::false_type>,
         // method 'zoomIn'
         QtPrivate::TypeAndForceComplete<void, std::false_type>,
         // method 'zoomOut'
@@ -351,6 +381,15 @@ Q_CONSTINIT const QMetaObject PdfDocumentController::staticMetaObject = { {
         // method 'addSignatureFromImageToSelection'
         QtPrivate::TypeAndForceComplete<void, std::false_type>,
         QtPrivate::TypeAndForceComplete<const QImage &, std::false_type>,
+        // method 'moveSelectedSignatureBy'
+        QtPrivate::TypeAndForceComplete<void, std::false_type>,
+        QtPrivate::TypeAndForceComplete<const QPointF &, std::false_type>,
+        // method 'resizeSelectedTextEditBy'
+        QtPrivate::TypeAndForceComplete<void, std::false_type>,
+        QtPrivate::TypeAndForceComplete<const QPointF &, std::false_type>,
+        // method 'remapPageOrder'
+        QtPrivate::TypeAndForceComplete<bool, std::false_type>,
+        QtPrivate::TypeAndForceComplete<const QVector<int> &, std::false_type>,
         // method 'selectOverlayAt'
         QtPrivate::TypeAndForceComplete<void, std::false_type>,
         QtPrivate::TypeAndForceComplete<const QPointF &, std::false_type>,
@@ -365,6 +404,12 @@ Q_CONSTINIT const QMetaObject PdfDocumentController::staticMetaObject = { {
         // method 'updateSelectedTextEdit'
         QtPrivate::TypeAndForceComplete<void, std::false_type>,
         QtPrivate::TypeAndForceComplete<const QString &, std::false_type>,
+        // method 'saveDocumentState'
+        QtPrivate::TypeAndForceComplete<void, std::false_type>,
+        // method 'undo'
+        QtPrivate::TypeAndForceComplete<void, std::false_type>,
+        // method 'redo'
+        QtPrivate::TypeAndForceComplete<void, std::false_type>,
         // method 'setSearchQuery'
         QtPrivate::TypeAndForceComplete<void, std::false_type>,
         QtPrivate::TypeAndForceComplete<const QString &, std::false_type>,
@@ -413,37 +458,45 @@ void PdfDocumentController::qt_static_metacall(QObject *_o, QMetaObject::Call _c
         case 13: _t->statusMessageChanged((*reinterpret_cast< std::add_pointer_t<QString>>(_a[1]))); break;
         case 14: _t->busyStateChanged((*reinterpret_cast< std::add_pointer_t<bool>>(_a[1])),(*reinterpret_cast< std::add_pointer_t<QString>>(_a[2]))); break;
         case 15: _t->ocrFinished((*reinterpret_cast< std::add_pointer_t<QString>>(_a[1])),(*reinterpret_cast< std::add_pointer_t<QString>>(_a[2]))); break;
-        case 16: _t->zoomIn(); break;
-        case 17: _t->zoomOut(); break;
-        case 18: _t->resetZoom(); break;
-        case 19: _t->setZoomFactor((*reinterpret_cast< std::add_pointer_t<double>>(_a[1]))); break;
-        case 20: _t->goToPage((*reinterpret_cast< std::add_pointer_t<int>>(_a[1]))); break;
-        case 21: _t->nextPage(); break;
-        case 22: _t->previousPage(); break;
-        case 23: _t->updateTextSelection((*reinterpret_cast< std::add_pointer_t<QRectF>>(_a[1]))); break;
-        case 24: _t->clearTextSelection(); break;
-        case 25: _t->copySelectedText(); break;
-        case 26: _t->addHighlightAnnotationFromSelection(); break;
-        case 27: _t->addRectangleAnnotationFromSelection(); break;
-        case 28: _t->addNoteAnnotationAt((*reinterpret_cast< std::add_pointer_t<QPointF>>(_a[1])),(*reinterpret_cast< std::add_pointer_t<QString>>(_a[2]))); break;
-        case 29: _t->addFreeTextAt((*reinterpret_cast< std::add_pointer_t<QPointF>>(_a[1])),(*reinterpret_cast< std::add_pointer_t<QString>>(_a[2]))); break;
-        case 30: _t->replaceSelectedText((*reinterpret_cast< std::add_pointer_t<QString>>(_a[1]))); break;
-        case 31: _t->addSignatureFromImageAt((*reinterpret_cast< std::add_pointer_t<QPointF>>(_a[1])),(*reinterpret_cast< std::add_pointer_t<QImage>>(_a[2]))); break;
-        case 32: _t->addSignatureFromImageToSelection((*reinterpret_cast< std::add_pointer_t<QImage>>(_a[1]))); break;
-        case 33: _t->selectOverlayAt((*reinterpret_cast< std::add_pointer_t<QPointF>>(_a[1]))); break;
-        case 34: _t->deleteSelectedOverlay(); break;
-        case 35: _t->setSelectedAnnotationColor((*reinterpret_cast< std::add_pointer_t<QColor>>(_a[1]))); break;
-        case 36: _t->updateSelectedNoteText((*reinterpret_cast< std::add_pointer_t<QString>>(_a[1]))); break;
-        case 37: _t->updateSelectedTextEdit((*reinterpret_cast< std::add_pointer_t<QString>>(_a[1]))); break;
-        case 38: _t->setSearchQuery((*reinterpret_cast< std::add_pointer_t<QString>>(_a[1]))); break;
-        case 39: _t->findNext(); break;
-        case 40: _t->findPrevious(); break;
-        case 41: _t->clearSearch(); break;
-        case 42: _t->setFormFieldText((*reinterpret_cast< std::add_pointer_t<QString>>(_a[1])),(*reinterpret_cast< std::add_pointer_t<QString>>(_a[2]))); break;
-        case 43: _t->setFormFieldChecked((*reinterpret_cast< std::add_pointer_t<QString>>(_a[1])),(*reinterpret_cast< std::add_pointer_t<bool>>(_a[2]))); break;
-        case 44: _t->addRedactionFromSelection(); break;
-        case 45: _t->runOcrOnCurrentPage(); break;
-        case 46: _t->runOcrOnSelection(); break;
+        case 16: _t->historyStateChanged((*reinterpret_cast< std::add_pointer_t<bool>>(_a[1])),(*reinterpret_cast< std::add_pointer_t<bool>>(_a[2]))); break;
+        case 17: _t->zoomIn(); break;
+        case 18: _t->zoomOut(); break;
+        case 19: _t->resetZoom(); break;
+        case 20: _t->setZoomFactor((*reinterpret_cast< std::add_pointer_t<double>>(_a[1]))); break;
+        case 21: _t->goToPage((*reinterpret_cast< std::add_pointer_t<int>>(_a[1]))); break;
+        case 22: _t->nextPage(); break;
+        case 23: _t->previousPage(); break;
+        case 24: _t->updateTextSelection((*reinterpret_cast< std::add_pointer_t<QRectF>>(_a[1]))); break;
+        case 25: _t->clearTextSelection(); break;
+        case 26: _t->copySelectedText(); break;
+        case 27: _t->addHighlightAnnotationFromSelection(); break;
+        case 28: _t->addRectangleAnnotationFromSelection(); break;
+        case 29: _t->addNoteAnnotationAt((*reinterpret_cast< std::add_pointer_t<QPointF>>(_a[1])),(*reinterpret_cast< std::add_pointer_t<QString>>(_a[2]))); break;
+        case 30: _t->addFreeTextAt((*reinterpret_cast< std::add_pointer_t<QPointF>>(_a[1])),(*reinterpret_cast< std::add_pointer_t<QString>>(_a[2]))); break;
+        case 31: _t->replaceSelectedText((*reinterpret_cast< std::add_pointer_t<QString>>(_a[1]))); break;
+        case 32: _t->addSignatureFromImageAt((*reinterpret_cast< std::add_pointer_t<QPointF>>(_a[1])),(*reinterpret_cast< std::add_pointer_t<QImage>>(_a[2]))); break;
+        case 33: _t->addSignatureFromImageToSelection((*reinterpret_cast< std::add_pointer_t<QImage>>(_a[1]))); break;
+        case 34: _t->moveSelectedSignatureBy((*reinterpret_cast< std::add_pointer_t<QPointF>>(_a[1]))); break;
+        case 35: _t->resizeSelectedTextEditBy((*reinterpret_cast< std::add_pointer_t<QPointF>>(_a[1]))); break;
+        case 36: { bool _r = _t->remapPageOrder((*reinterpret_cast< std::add_pointer_t<QList<int>>>(_a[1])));
+            if (_a[0]) *reinterpret_cast< bool*>(_a[0]) = std::move(_r); }  break;
+        case 37: _t->selectOverlayAt((*reinterpret_cast< std::add_pointer_t<QPointF>>(_a[1]))); break;
+        case 38: _t->deleteSelectedOverlay(); break;
+        case 39: _t->setSelectedAnnotationColor((*reinterpret_cast< std::add_pointer_t<QColor>>(_a[1]))); break;
+        case 40: _t->updateSelectedNoteText((*reinterpret_cast< std::add_pointer_t<QString>>(_a[1]))); break;
+        case 41: _t->updateSelectedTextEdit((*reinterpret_cast< std::add_pointer_t<QString>>(_a[1]))); break;
+        case 42: _t->saveDocumentState(); break;
+        case 43: _t->undo(); break;
+        case 44: _t->redo(); break;
+        case 45: _t->setSearchQuery((*reinterpret_cast< std::add_pointer_t<QString>>(_a[1]))); break;
+        case 46: _t->findNext(); break;
+        case 47: _t->findPrevious(); break;
+        case 48: _t->clearSearch(); break;
+        case 49: _t->setFormFieldText((*reinterpret_cast< std::add_pointer_t<QString>>(_a[1])),(*reinterpret_cast< std::add_pointer_t<QString>>(_a[2]))); break;
+        case 50: _t->setFormFieldChecked((*reinterpret_cast< std::add_pointer_t<QString>>(_a[1])),(*reinterpret_cast< std::add_pointer_t<bool>>(_a[2]))); break;
+        case 51: _t->addRedactionFromSelection(); break;
+        case 52: _t->runOcrOnCurrentPage(); break;
+        case 53: _t->runOcrOnSelection(); break;
         default: ;
         }
     }
@@ -463,6 +516,13 @@ void PdfDocumentController::qt_static_metacall(QObject *_o, QMetaObject::Call _c
             case 1:
             case 0:
                 *reinterpret_cast<QMetaType *>(_a[0]) = QMetaType::fromType< QList<QRectF> >(); break;
+            }
+            break;
+        case 36:
+            switch (*reinterpret_cast<int*>(_a[1])) {
+            default: *reinterpret_cast<QMetaType *>(_a[0]) = QMetaType(); break;
+            case 0:
+                *reinterpret_cast<QMetaType *>(_a[0]) = QMetaType::fromType< QList<int> >(); break;
             }
             break;
         }
@@ -581,6 +641,13 @@ void PdfDocumentController::qt_static_metacall(QObject *_o, QMetaObject::Call _c
                 return;
             }
         }
+        {
+            using _q_method_type = void (PdfDocumentController::*)(bool , bool );
+            if (_q_method_type _q_method = &PdfDocumentController::historyStateChanged; *reinterpret_cast<_q_method_type *>(_a[1]) == _q_method) {
+                *result = 16;
+                return;
+            }
+        }
     }
 }
 
@@ -603,14 +670,14 @@ int PdfDocumentController::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
     if (_id < 0)
         return _id;
     if (_c == QMetaObject::InvokeMetaMethod) {
-        if (_id < 47)
+        if (_id < 54)
             qt_static_metacall(this, _c, _id, _a);
-        _id -= 47;
+        _id -= 54;
     }
     if (_c == QMetaObject::RegisterMethodArgumentMetaType) {
-        if (_id < 47)
+        if (_id < 54)
             qt_static_metacall(this, _c, _id, _a);
-        _id -= 47;
+        _id -= 54;
     }
     return _id;
 }
@@ -725,5 +792,12 @@ void PdfDocumentController::ocrFinished(const QString & _t1, const QString & _t2
 {
     void *_a[] = { nullptr, const_cast<void*>(reinterpret_cast<const void*>(std::addressof(_t1))), const_cast<void*>(reinterpret_cast<const void*>(std::addressof(_t2))) };
     QMetaObject::activate(this, &staticMetaObject, 15, _a);
+}
+
+// SIGNAL 16
+void PdfDocumentController::historyStateChanged(bool _t1, bool _t2)
+{
+    void *_a[] = { nullptr, const_cast<void*>(reinterpret_cast<const void*>(std::addressof(_t1))), const_cast<void*>(reinterpret_cast<const void*>(std::addressof(_t2))) };
+    QMetaObject::activate(this, &staticMetaObject, 16, _a);
 }
 QT_WARNING_POP

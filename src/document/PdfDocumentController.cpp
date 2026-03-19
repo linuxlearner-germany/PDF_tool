@@ -6,6 +6,7 @@
 #include <QClipboard>
 #include <QFile>
 #include <QGuiApplication>
+#include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QFont>
@@ -66,8 +67,11 @@ bool PdfDocumentController::openDocument(const QString &filePath, const QByteArr
         const QVector<PdfFormField> pageFields = m_renderEngine->formFields(pageIndex);
         fields += pageFields;
     }
+    m_baseFormFields = fields;
     m_formFieldModel.setFields(fields);
     loadSidecarState();
+    resetHistory();
+    recordHistorySnapshot();
 
     emit documentStateChanged(true);
     emit zoomChanged(m_zoomFactor);
@@ -516,6 +520,16 @@ bool PdfDocumentController::hasSelectedTextEditAnnotation() const
         && m_annotationModel.selectedAnnotationKind() == PdfAnnotationKind::FreeText;
 }
 
+bool PdfDocumentController::hasSelectedMovableAnnotation() const
+{
+    if (!m_annotationModel.hasSelectedAnnotation()) {
+        return false;
+    }
+
+    const PdfAnnotationKind kind = m_annotationModel.selectedAnnotationKind();
+    return kind == PdfAnnotationKind::Signature || kind == PdfAnnotationKind::FreeText;
+}
+
 QString PdfDocumentController::selectedTextEditText() const
 {
     return hasSelectedTextEditAnnotation() ? m_annotationModel.selectedAnnotationText() : QString();
@@ -525,6 +539,16 @@ bool PdfDocumentController::hasSelectedSignatureAnnotation() const
 {
     return m_annotationModel.hasSelectedAnnotation()
         && m_annotationModel.selectedAnnotationKind() == PdfAnnotationKind::Signature;
+}
+
+bool PdfDocumentController::canUndo() const
+{
+    return m_historyIndex > 0 && m_historyIndex < m_historySnapshots.size();
+}
+
+bool PdfDocumentController::canRedo() const
+{
+    return m_historyIndex >= 0 && m_historyIndex < (m_historySnapshots.size() - 1);
 }
 
 QPixmap PdfDocumentController::thumbnailForPage(int pageIndex, const QSize &targetSize)
@@ -657,6 +681,7 @@ void PdfDocumentController::addHighlightAnnotationFromSelection()
     }
 
     saveSidecarState();
+    recordHistorySnapshot();
     emitOverlayState();
     updateOverlaySelectionSignal();
     emit statusMessageChanged(QStringLiteral("Highlight-Annotation hinzugefügt."));
@@ -673,6 +698,7 @@ void PdfDocumentController::addRectangleAnnotationFromSelection()
     }
 
     saveSidecarState();
+    recordHistorySnapshot();
     emitOverlayState();
     updateOverlaySelectionSignal();
     emit statusMessageChanged(QStringLiteral("Rechteck-Annotation hinzugefügt."));
@@ -691,6 +717,7 @@ void PdfDocumentController::addNoteAnnotationAt(const QPointF &imagePoint, const
     }
 
     saveSidecarState();
+    recordHistorySnapshot();
     emitOverlayState();
     updateOverlaySelectionSignal();
     emit statusMessageChanged(QStringLiteral("Textnotiz hinzugefügt."));
@@ -709,6 +736,7 @@ void PdfDocumentController::addFreeTextAt(const QPointF &imagePoint, const QStri
     }
 
     saveSidecarState();
+    recordHistorySnapshot();
     emitOverlayState();
     updateOverlaySelectionSignal();
     emit statusMessageChanged(QStringLiteral("Textfeld hinzugefügt."));
@@ -725,6 +753,7 @@ void PdfDocumentController::replaceSelectedText(const QString &text)
     }
 
     saveSidecarState();
+    recordHistorySnapshot();
     emitOverlayState();
     updateOverlaySelectionSignal();
     emit statusMessageChanged(QStringLiteral("Text ersetzt."));
@@ -754,6 +783,7 @@ void PdfDocumentController::addSignatureFromImageAt(const QPointF &imagePoint, c
     }
 
     saveSidecarState();
+    recordHistorySnapshot();
     emitOverlayState();
     updateOverlaySelectionSignal();
     emit statusMessageChanged(QStringLiteral("Unterschrift eingefügt."));
@@ -775,9 +805,79 @@ void PdfDocumentController::addSignatureFromImageToSelection(const QImage &signa
     }
 
     saveSidecarState();
+    recordHistorySnapshot();
     emitOverlayState();
     updateOverlaySelectionSignal();
     emit statusMessageChanged(QStringLiteral("Unterschrift platziert."));
+}
+
+void PdfDocumentController::moveSelectedSignatureBy(const QPointF &imageDelta)
+{
+    if (!hasSelectedMovableAnnotation() || m_currentPageImage.isNull() || m_pageSizePoints.isEmpty()) {
+        return;
+    }
+
+    const QPointF pageDelta(
+        imageDelta.x() * m_pageSizePoints.width() / qMax(1, m_currentPageImage.width()),
+        imageDelta.y() * m_pageSizePoints.height() / qMax(1, m_currentPageImage.height()));
+
+    if (!m_annotationModel.translateSelected(pageDelta)) {
+        return;
+    }
+
+    saveSidecarState();
+    recordHistorySnapshot();
+    emitOverlayState();
+    updateOverlaySelectionSignal();
+    emit statusMessageChanged(
+        m_annotationModel.selectedAnnotationKind() == PdfAnnotationKind::FreeText
+            ? QStringLiteral("Textfeld verschoben.")
+            : QStringLiteral("Unterschrift verschoben."));
+}
+
+void PdfDocumentController::resizeSelectedTextEditBy(const QPointF &imageDelta)
+{
+    if (!hasSelectedTextEditAnnotation() || m_currentPageImage.isNull() || m_pageSizePoints.isEmpty()) {
+        return;
+    }
+
+    const QSizeF pageDelta(
+        imageDelta.x() * m_pageSizePoints.width() / qMax(1, m_currentPageImage.width()),
+        imageDelta.y() * m_pageSizePoints.height() / qMax(1, m_currentPageImage.height()));
+
+    if (!m_annotationModel.resizeSelectedFreeText(pageDelta)) {
+        return;
+    }
+
+    saveSidecarState();
+    recordHistorySnapshot();
+    emitOverlayState();
+    updateOverlaySelectionSignal();
+    emit statusMessageChanged(QStringLiteral("Textfeldgröße geändert."));
+}
+
+bool PdfDocumentController::remapPageOrder(const QVector<int> &newOrder)
+{
+    if (!hasDocument()) {
+        return false;
+    }
+
+    if (newOrder.isEmpty()) {
+        m_lastError = QStringLiteral("Die neue Seitenreihenfolge ist leer.");
+        return false;
+    }
+
+    m_annotationModel.remapPages(newOrder);
+    m_formFieldModel.remapPages(newOrder);
+    m_redactionModel.remapPages(newOrder);
+    clearSelectionInternal(false);
+    m_searchModel.clear();
+    saveSidecarState();
+    recordHistorySnapshot();
+    emitOverlayState();
+    emitSearchState();
+    updateOverlaySelectionSignal();
+    return true;
 }
 
 void PdfDocumentController::selectOverlayAt(const QPointF &imagePoint)
@@ -819,6 +919,7 @@ void PdfDocumentController::deleteSelectedOverlay()
     }
 
     saveSidecarState();
+    recordHistorySnapshot();
     emitOverlayState();
     updateOverlaySelectionSignal();
     emit statusMessageChanged(QStringLiteral("Ausgewähltes Overlay gelöscht."));
@@ -836,6 +937,7 @@ void PdfDocumentController::setSelectedAnnotationColor(const QColor &color)
     }
 
     saveSidecarState();
+    recordHistorySnapshot();
     emitOverlayState();
     emit statusMessageChanged(QStringLiteral("Annotierungsfarbe aktualisiert."));
 }
@@ -852,6 +954,7 @@ void PdfDocumentController::updateSelectedNoteText(const QString &text)
     }
 
     saveSidecarState();
+    recordHistorySnapshot();
     emitOverlayState();
     emit statusMessageChanged(QStringLiteral("Textnotiz aktualisiert."));
 }
@@ -868,8 +971,45 @@ void PdfDocumentController::updateSelectedTextEdit(const QString &text)
     }
 
     saveSidecarState();
+    recordHistorySnapshot();
     emitOverlayState();
     emit statusMessageChanged(QStringLiteral("Textfeld aktualisiert."));
+}
+
+void PdfDocumentController::saveDocumentState()
+{
+    if (!hasDocument()) {
+        return;
+    }
+
+    saveSidecarState();
+    emit statusMessageChanged(QStringLiteral("Änderungen gespeichert."));
+}
+
+void PdfDocumentController::undo()
+{
+    if (!canUndo()) {
+        return;
+    }
+
+    --m_historyIndex;
+    restoreDocumentState(m_historySnapshots.at(m_historyIndex));
+    saveSidecarState();
+    updateHistoryState();
+    emit statusMessageChanged(QStringLiteral("Letzte Änderung rückgängig gemacht."));
+}
+
+void PdfDocumentController::redo()
+{
+    if (!canRedo()) {
+        return;
+    }
+
+    ++m_historyIndex;
+    restoreDocumentState(m_historySnapshots.at(m_historyIndex));
+    saveSidecarState();
+    updateHistoryState();
+    emit statusMessageChanged(QStringLiteral("Änderung wiederhergestellt."));
 }
 
 void PdfDocumentController::setSearchQuery(const QString &query)
@@ -945,6 +1085,7 @@ void PdfDocumentController::setFormFieldText(const QString &fieldId, const QStri
     }
 
     saveSidecarState();
+    recordHistorySnapshot();
     emitOverlayState();
     emit statusMessageChanged(QStringLiteral("Formularwert aktualisiert."));
 }
@@ -956,6 +1097,7 @@ void PdfDocumentController::setFormFieldChecked(const QString &fieldId, bool che
     }
 
     saveSidecarState();
+    recordHistorySnapshot();
     emitOverlayState();
     emit statusMessageChanged(QStringLiteral("Checkbox aktualisiert."));
 }
@@ -971,6 +1113,7 @@ void PdfDocumentController::addRedactionFromSelection()
     }
 
     saveSidecarState();
+    recordHistorySnapshot();
     emitOverlayState();
     updateOverlaySelectionSignal();
     emit statusMessageChanged(QStringLiteral("Schwärzung vorgemerkt."));
@@ -1092,6 +1235,58 @@ void PdfDocumentController::saveSidecarState() const
     file.write(QJsonDocument(root).toJson(QJsonDocument::Indented));
 }
 
+QJsonObject PdfDocumentController::currentDocumentState() const
+{
+    QJsonObject root;
+    root.insert(QStringLiteral("version"), kSidecarVersion);
+    root.insert(QStringLiteral("annotations"), m_annotationModel.toJson());
+    root.insert(QStringLiteral("formFields"), m_formFieldModel.toJson());
+    root.insert(QStringLiteral("redactions"), m_redactionModel.toJson());
+    return root;
+}
+
+void PdfDocumentController::restoreDocumentState(const QJsonObject &state)
+{
+    m_annotationModel.fromJson(state.value(QStringLiteral("annotations")).toArray());
+    m_formFieldModel.setFields(m_baseFormFields);
+    m_formFieldModel.fromJson(state.value(QStringLiteral("formFields")).toArray());
+    m_redactionModel.fromJson(state.value(QStringLiteral("redactions")).toArray());
+
+    emitOverlayState();
+    updateOverlaySelectionSignal();
+}
+
+void PdfDocumentController::resetHistory()
+{
+    m_historySnapshots.clear();
+    m_historyIndex = -1;
+    updateHistoryState();
+}
+
+void PdfDocumentController::recordHistorySnapshot()
+{
+    const QJsonObject snapshot = currentDocumentState();
+    if (m_historyIndex >= 0
+        && m_historyIndex < m_historySnapshots.size()
+        && m_historySnapshots.at(m_historyIndex) == snapshot) {
+        updateHistoryState();
+        return;
+    }
+
+    while (m_historySnapshots.size() > m_historyIndex + 1) {
+        m_historySnapshots.removeLast();
+    }
+
+    m_historySnapshots.append(snapshot);
+    m_historyIndex = m_historySnapshots.size() - 1;
+    updateHistoryState();
+}
+
+void PdfDocumentController::updateHistoryState()
+{
+    emit historyStateChanged(canUndo(), canRedo());
+}
+
 void PdfDocumentController::resetDocumentState()
 {
     m_documentPath.clear();
@@ -1103,6 +1298,7 @@ void PdfDocumentController::resetDocumentState()
     m_annotationModel.clear();
     m_formFieldModel.clear();
     m_redactionModel.clear();
+    m_baseFormFields.clear();
     if (m_thumbnailProvider) {
         m_thumbnailProvider->clear();
     }
@@ -1114,6 +1310,7 @@ void PdfDocumentController::resetDocumentState()
     m_zoomFactor = 1.0;
     m_currentOwnerPassword.clear();
     m_currentUserPassword.clear();
+    resetHistory();
 }
 
 void PdfDocumentController::clearSelectionInternal(bool emitSignal)

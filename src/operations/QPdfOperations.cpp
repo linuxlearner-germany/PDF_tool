@@ -1,5 +1,7 @@
 #include "operations/QPdfOperations.h"
 
+#include <algorithm>
+
 #include <QDir>
 #include <QFileInfo>
 
@@ -27,6 +29,67 @@ QString QPdfOperations::backendName() const
 QString QPdfOperations::lastError() const
 {
     return m_lastError;
+}
+
+namespace
+{
+#ifdef PDF_TOOL_HAS_QPDF
+bool writePageOrder(
+    QString &lastError,
+    const QString &inputFile,
+    const QString &outputFile,
+    const QVector<int> &pageOrder,
+    const QByteArray &password)
+{
+    if (inputFile.isEmpty() || outputFile.isEmpty()) {
+        lastError = QStringLiteral("Eingabe- oder Ausgabedatei fehlt.");
+        return false;
+    }
+
+    try {
+        QPDF inputPdf;
+        inputPdf.processFile(inputFile.toLocal8Bit().constData(), password.isEmpty() ? nullptr : password.constData());
+
+        QPDFPageDocumentHelper inputPages(inputPdf);
+        const auto pages = inputPages.getAllPages();
+        if (pages.empty()) {
+            lastError = QStringLiteral("Das Dokument enthält keine Seiten.");
+            return false;
+        }
+
+        if (pageOrder.size() != static_cast<int>(pages.size())) {
+            lastError = QStringLiteral("Die neue Seitenreihenfolge ist unvollständig.");
+            return false;
+        }
+
+        QVector<int> sortedOrder = pageOrder;
+        std::sort(sortedOrder.begin(), sortedOrder.end());
+        for (int index = 0; index < sortedOrder.size(); ++index) {
+            if (sortedOrder.at(index) != index) {
+                lastError = QStringLiteral("Die neue Seitenreihenfolge ist ungültig.");
+                return false;
+            }
+        }
+
+        QPDF outputPdf;
+        outputPdf.emptyPDF();
+        QPDFPageDocumentHelper outputPages(outputPdf);
+        for (int pageIndex : pageOrder) {
+            outputPages.addPage(pages.at(static_cast<std::size_t>(pageIndex)), false);
+        }
+
+        QPDFWriter writer(outputPdf, outputFile.toLocal8Bit().constData());
+        writer.write();
+        return true;
+    } catch (const QPDFExc &exception) {
+        lastError = QString::fromLocal8Bit(exception.what());
+        return false;
+    } catch (const std::exception &exception) {
+        lastError = QString::fromLocal8Bit(exception.what());
+        return false;
+    }
+}
+#endif
 }
 
 bool QPdfOperations::mergeFiles(const QStringList &inputFiles, const QString &outputFile)
@@ -193,6 +256,84 @@ bool QPdfOperations::encryptFile(
     Q_UNUSED(userPassword)
     Q_UNUSED(ownerPassword)
     Q_UNUSED(inputPassword)
+    m_lastError = QStringLiteral("qpdf ist nicht verfügbar.");
+    return false;
+#endif
+}
+
+bool QPdfOperations::reorderPages(
+    const QString &inputFile,
+    const QString &outputFile,
+    const QVector<int> &pageOrder,
+    const QByteArray &password)
+{
+#ifdef PDF_TOOL_HAS_QPDF
+    m_lastError.clear();
+    return writePageOrder(m_lastError, inputFile, outputFile, pageOrder, password);
+#else
+    Q_UNUSED(inputFile)
+    Q_UNUSED(outputFile)
+    Q_UNUSED(pageOrder)
+    Q_UNUSED(password)
+    m_lastError = QStringLiteral("qpdf ist nicht verfügbar.");
+    return false;
+#endif
+}
+
+bool QPdfOperations::deletePages(
+    const QString &inputFile,
+    const QString &outputFile,
+    const QVector<int> &pagesToDelete,
+    const QByteArray &password)
+{
+#ifdef PDF_TOOL_HAS_QPDF
+    m_lastError.clear();
+
+    if (pagesToDelete.isEmpty()) {
+        m_lastError = QStringLiteral("Es wurden keine Seiten zum Löschen angegeben.");
+        return false;
+    }
+
+    try {
+        QPDF inputPdf;
+        inputPdf.processFile(inputFile.toLocal8Bit().constData(), password.isEmpty() ? nullptr : password.constData());
+        QPDFPageDocumentHelper inputPages(inputPdf);
+        const auto pages = inputPages.getAllPages();
+        if (pages.empty()) {
+            m_lastError = QStringLiteral("Das Dokument enthält keine Seiten.");
+            return false;
+        }
+
+        QVector<int> deleteOrder = pagesToDelete;
+        std::sort(deleteOrder.begin(), deleteOrder.end());
+        deleteOrder.erase(std::unique(deleteOrder.begin(), deleteOrder.end()), deleteOrder.end());
+
+        QVector<int> remainingPages;
+        remainingPages.reserve(static_cast<int>(pages.size()));
+        for (int index = 0; index < static_cast<int>(pages.size()); ++index) {
+            if (!deleteOrder.contains(index)) {
+                remainingPages.append(index);
+            }
+        }
+
+        if (remainingPages.isEmpty()) {
+            m_lastError = QStringLiteral("Mindestens eine Seite muss im Dokument verbleiben.");
+            return false;
+        }
+
+        return writePageOrder(m_lastError, inputFile, outputFile, remainingPages, password);
+    } catch (const QPDFExc &exception) {
+        m_lastError = QString::fromLocal8Bit(exception.what());
+        return false;
+    } catch (const std::exception &exception) {
+        m_lastError = QString::fromLocal8Bit(exception.what());
+        return false;
+    }
+#else
+    Q_UNUSED(inputFile)
+    Q_UNUSED(outputFile)
+    Q_UNUSED(pagesToDelete)
+    Q_UNUSED(password)
     m_lastError = QStringLiteral("qpdf ist nicht verfügbar.");
     return false;
 #endif

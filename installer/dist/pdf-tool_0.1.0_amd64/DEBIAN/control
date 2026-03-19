@@ -1,0 +1,10 @@
+Package: pdf-tool
+Version: 0.1.0
+Section: utils
+Priority: optional
+Architecture: amd64
+Maintainer: Paul <unknown@example.com>
+Depends: libc6, libstdc++6, libqt6core6, libqt6gui6, libqt6widgets6, libqt6printsupport6, qt6-qpa-plugins, libjpeg62-turbo, zlib1g
+Description: Desktop PDF-Werkzeug auf Basis von Qt 6
+ PDFTool bietet Anzeigen, Suchen, Annotationen, OCR, Signaturen,
+ Formularbearbeitung und PDF-Export in einer Desktop-Anwendung.

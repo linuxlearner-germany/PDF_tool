@@ -1,0 +1,19 @@
+<RCC>
+    <qresource prefix="/">
+        <file>icons/open.svg</file>
+        <file>icons/save.svg</file>
+        <file>icons/print.svg</file>
+        <file>icons/undo.svg</file>
+        <file>icons/redo.svg</file>
+        <file>icons/previous.svg</file>
+        <file>icons/next.svg</file>
+        <file>icons/zoom_in.svg</file>
+        <file>icons/zoom_out.svg</file>
+        <file>icons/zoom_reset.svg</file>
+        <file>icons/search.svg</file>
+        <file>icons/search_next.svg</file>
+        <file>icons/search_previous.svg</file>
+        <file>icons/info.svg</file>
+        <file>icons/theme.svg</file>
+    </qresource>
+</RCC>

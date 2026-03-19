@@ -16,9 +16,28 @@
 #include <QScrollBar>
 #include <QWheelEvent>
 
+namespace
+{
+constexpr qreal kTextResizeHandleSize = 12.0;
+
+QRectF resizeHandleRectFor(const QRectF &rect)
+{
+    return QRectF(rect.right() - kTextResizeHandleSize,
+                  rect.bottom() - kTextResizeHandleSize,
+                  kTextResizeHandleSize,
+                  kTextResizeHandleSize);
+}
+}
+
 PdfView::PdfView(QWidget *parent)
     : QGraphicsView(parent)
     , m_pixmapItem(m_scene.addPixmap(QPixmap()))
+    , m_emptyStateItem(m_scene.addText(QStringLiteral(
+          "PDFTool\n\n"
+          "Datei > Oeffnen oder Strg+O\n"
+          "zum Laden eines PDFs\n\n"
+          "Hinweis: Die Arbeitsflaeche zeigt Seiten,"
+          "\nSuche, Annotationen und Exporte.")))
     , m_selectionRectItem(m_scene.addRect(QRectF(), QPen(QColor(15, 108, 115), 1.6, Qt::DashLine), QBrush(QColor(15, 108, 115, 45))))
 {
     setScene(&m_scene);
@@ -36,6 +55,15 @@ PdfView::PdfView(QWidget *parent)
         "  background: qlineargradient(x1:0, y1:0, x2:1, y2:1,"
         "                              stop:0 #ece5d8, stop:1 #d8d1c2);"
         "}"));
+
+    QFont emptyStateFont;
+    emptyStateFont.setPointSize(16);
+    emptyStateFont.setBold(true);
+    m_emptyStateItem->setFont(emptyStateFont);
+    m_emptyStateItem->setDefaultTextColor(QColor(88, 98, 104));
+    m_emptyStateItem->setZValue(1.0);
+    m_emptyStateItem->setTextWidth(440.0);
+    m_emptyStateItem->setPos(-220.0, -70.0);
 
     m_selectionRectItem->setVisible(false);
     m_selectionRectItem->setZValue(8.0);
@@ -65,6 +93,20 @@ void PdfView::setDarkMode(bool enabled)
 void PdfView::setPageImage(const QImage &image)
 {
     m_pixmapItem->setPixmap(QPixmap::fromImage(image));
+    if (image.isNull()) {
+        m_scene.setSceneRect(QRectF(-320.0, -180.0, 640.0, 360.0));
+        m_emptyStateItem->setVisible(true);
+        clearDragSelectionOverlay();
+        clearRectItems(m_selectionHighlightItems);
+        clearRectItems(m_searchHighlightItems);
+        clearRectItems(m_currentSearchHighlightItems);
+        clearGenericItems(m_annotationItems);
+        clearFormWidgets();
+        clearRectItems(m_redactionItems);
+        return;
+    }
+
+    m_emptyStateItem->setVisible(false);
     const QRectF pageRect = m_pixmapItem->boundingRect();
     constexpr qreal kHorizontalGap = 24.0;
     constexpr qreal kVerticalGap = 72.0;
@@ -125,6 +167,7 @@ void PdfView::setSearchHighlights(const QVector<QRectF> &imageRects, const QVect
 void PdfView::setAnnotationOverlays(const QVector<PdfAnnotationOverlay> &overlays)
 {
     clearGenericItems(m_annotationItems);
+    m_annotationOverlays = overlays;
 
     for (const PdfAnnotationOverlay &overlay : overlays) {
         switch (overlay.kind) {
@@ -172,6 +215,15 @@ void PdfView::setAnnotationOverlays(const QVector<PdfAnnotationOverlay> &overlay
                 textItem->setPos(rect.topLeft() + QPointF(5.0, 3.0));
                 textItem->setZValue(6.3);
                 m_annotationItems.append(textItem);
+
+                if (overlay.selected) {
+                    auto *handleItem = m_scene.addRect(
+                        resizeHandleRectFor(rect),
+                        QPen(QColor(21, 101, 192), 1.0),
+                        QBrush(QColor(21, 101, 192)));
+                    handleItem->setZValue(6.4);
+                    m_annotationItems.append(handleItem);
+                }
             }
             break;
         case PdfAnnotationKind::Signature:
@@ -276,13 +328,33 @@ void PdfView::mousePressEvent(QMouseEvent *event)
             }
         }
 
+        const QPointF scenePoint = clampToPage(mapToScene(event->position().toPoint()));
+        if (isSelectedTextResizeHandleHit(scenePoint)) {
+            setFocus();
+            m_isResizingTextEdit = true;
+            m_dragStart = scenePoint;
+            m_dragCurrent = scenePoint;
+            setCursor(Qt::SizeFDiagCursor);
+            event->accept();
+            return;
+        }
+
+        if (isSelectedMovableAnnotationHit(scenePoint)) {
+            setFocus();
+            m_isDraggingSignature = true;
+            m_dragStart = scenePoint;
+            m_dragCurrent = scenePoint;
+            setCursor(Qt::ClosedHandCursor);
+            event->accept();
+            return;
+        }
+
         setFocus();
         m_isSelecting = true;
         setDragMode(QGraphicsView::NoDrag);
         clearDragSelectionOverlay();
 
-        const QPointF scenePoint = mapToScene(event->position().toPoint());
-        m_selectionStart = clampToPage(scenePoint);
+        m_selectionStart = scenePoint;
         m_selectionCurrent = m_selectionStart;
         m_selectionRectItem->setRect(currentSelectionRect());
         m_selectionRectItem->setVisible(true);
@@ -295,6 +367,18 @@ void PdfView::mousePressEvent(QMouseEvent *event)
 
 void PdfView::mouseMoveEvent(QMouseEvent *event)
 {
+    if (m_isResizingTextEdit) {
+        m_dragCurrent = clampToPage(mapToScene(event->position().toPoint()));
+        event->accept();
+        return;
+    }
+
+    if (m_isDraggingSignature) {
+        m_dragCurrent = clampToPage(mapToScene(event->position().toPoint()));
+        event->accept();
+        return;
+    }
+
     if (m_isSelecting) {
         m_selectionCurrent = clampToPage(mapToScene(event->position().toPoint()));
         m_selectionRectItem->setRect(currentSelectionRect());
@@ -308,6 +392,30 @@ void PdfView::mouseMoveEvent(QMouseEvent *event)
 
 void PdfView::mouseReleaseEvent(QMouseEvent *event)
 {
+    if (m_isResizingTextEdit && event->button() == Qt::LeftButton) {
+        m_dragCurrent = clampToPage(mapToScene(event->position().toPoint()));
+        m_isResizingTextEdit = false;
+        unsetCursor();
+        const QPointF delta = m_dragCurrent - m_dragStart;
+        if (std::abs(delta.x()) >= 1.0 || std::abs(delta.y()) >= 1.0) {
+            emit textEditResizeRequested(delta);
+        }
+        event->accept();
+        return;
+    }
+
+    if (m_isDraggingSignature && event->button() == Qt::LeftButton) {
+        m_dragCurrent = clampToPage(mapToScene(event->position().toPoint()));
+        m_isDraggingSignature = false;
+        unsetCursor();
+        const QPointF delta = m_dragCurrent - m_dragStart;
+        if (std::abs(delta.x()) >= 1.0 || std::abs(delta.y()) >= 1.0) {
+            emit signatureMoveRequested(delta);
+        }
+        event->accept();
+        return;
+    }
+
     if (m_isSelecting && event->button() == Qt::LeftButton) {
         m_selectionCurrent = clampToPage(mapToScene(event->position().toPoint()));
         m_isSelecting = false;
@@ -394,11 +502,52 @@ void PdfView::wheelEvent(QWheelEvent *event)
     QGraphicsView::wheelEvent(event);
 }
 
+QRectF PdfView::selectedTextResizeHandleRect() const
+{
+    for (const PdfAnnotationOverlay &overlay : m_annotationOverlays) {
+        if (!overlay.selected || overlay.kind != PdfAnnotationKind::FreeText || overlay.imageRects.isEmpty()) {
+            continue;
+        }
+        return resizeHandleRectFor(overlay.imageRects.first());
+    }
+
+    return {};
+}
+
 QPointF PdfView::clampToPage(const QPointF &scenePoint) const
 {
     const QRectF pageRect = m_pixmapItem->boundingRect();
     return QPointF(std::clamp(scenePoint.x(), pageRect.left(), pageRect.right()),
                    std::clamp(scenePoint.y(), pageRect.top(), pageRect.bottom()));
+}
+
+bool PdfView::isSelectedTextResizeHandleHit(const QPointF &scenePoint) const
+{
+    const QRectF handleRect = selectedTextResizeHandleRect();
+    return handleRect.isValid() && handleRect.contains(scenePoint);
+}
+
+bool PdfView::isSelectedMovableAnnotationHit(const QPointF &scenePoint) const
+{
+    for (const PdfAnnotationOverlay &overlay : m_annotationOverlays) {
+        if (!overlay.selected) {
+            continue;
+        }
+        if (overlay.kind != PdfAnnotationKind::Signature
+            && overlay.kind != PdfAnnotationKind::FreeText) {
+            continue;
+        }
+        for (const QRectF &rect : overlay.imageRects) {
+            if (overlay.kind == PdfAnnotationKind::FreeText && resizeHandleRectFor(rect).contains(scenePoint)) {
+                continue;
+            }
+            if (rect.contains(scenePoint)) {
+                return true;
+            }
+        }
+    }
+
+    return false;
 }
 
 QRectF PdfView::currentSelectionRect() const

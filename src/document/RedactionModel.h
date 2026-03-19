@@ -17,6 +17,7 @@ public:
     bool selectAt(int pageIndex, const QPointF &pagePoint);
     QString selectedRedactionId() const;
     bool hasSelectedRedaction() const;
+    bool remapPages(const QVector<int> &newOrder);
 
     QVector<PdfRedaction> redactionsForPage(int pageIndex) const;
     bool hasRedactions() const;

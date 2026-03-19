@@ -17,6 +17,7 @@ public:
     bool setTextValue(const QString &fieldId, const QString &text);
     bool setChecked(const QString &fieldId, bool checked);
     QString fieldIdAt(int pageIndex, const QPointF &pagePoint) const;
+    bool remapPages(const QVector<int> &newOrder);
 
     QJsonArray toJson() const;
     bool fromJson(const QJsonArray &valuesArray);

@@ -4,6 +4,7 @@
 #include <QGraphicsProxyWidget>
 #include <QGraphicsRectItem>
 #include <QGraphicsScene>
+#include <QGraphicsTextItem>
 #include <QGraphicsView>
 #include <QImage>
 #include <QPoint>
@@ -44,6 +45,8 @@ signals:
     void zoomInRequested();
     void zoomOutRequested();
     void pointActivated(const QPointF &imagePoint);
+    void signatureMoveRequested(const QPointF &imageDelta);
+    void textEditResizeRequested(const QPointF &imageDelta);
     void contextMenuRequested(const QPointF &imagePoint, const QPoint &globalPos);
     void formTextEdited(const QString &fieldId, const QString &text);
     void formCheckToggled(const QString &fieldId, bool checked);
@@ -57,7 +60,10 @@ protected:
     void wheelEvent(QWheelEvent *event) override;
 
 private:
+    QRectF selectedTextResizeHandleRect() const;
     QPointF clampToPage(const QPointF &scenePoint) const;
+    bool isSelectedTextResizeHandleHit(const QPointF &scenePoint) const;
+    bool isSelectedMovableAnnotationHit(const QPointF &scenePoint) const;
     QRectF currentSelectionRect() const;
     void clearDragSelectionOverlay();
     void clearRectItems(QVector<QGraphicsRectItem *> &items);
@@ -73,6 +79,7 @@ private:
 
     QGraphicsScene m_scene;
     QGraphicsPixmapItem *m_pixmapItem {nullptr};
+    QGraphicsTextItem *m_emptyStateItem {nullptr};
     QGraphicsRectItem *m_selectionRectItem {nullptr};
     QVector<QGraphicsRectItem *> m_selectionHighlightItems;
     QVector<QGraphicsRectItem *> m_searchHighlightItems;
@@ -82,6 +89,11 @@ private:
     QVector<QGraphicsRectItem *> m_redactionItems;
     QPointF m_selectionStart;
     QPointF m_selectionCurrent;
+    QPointF m_dragStart;
+    QPointF m_dragCurrent;
     bool m_isSelecting {false};
+    bool m_isResizingTextEdit {false};
+    bool m_isDraggingSignature {false};
+    QVector<PdfAnnotationOverlay> m_annotationOverlays;
     PendingScrollTarget m_pendingScrollTarget {PendingScrollTarget::Top};
 };

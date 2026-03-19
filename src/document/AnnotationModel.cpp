@@ -163,6 +163,69 @@ bool AnnotationModel::setText(const QString &annotationId, const QString &text)
     return false;
 }
 
+bool AnnotationModel::translateSelected(const QPointF &pageDelta)
+{
+    if (pageDelta.isNull()) {
+        return false;
+    }
+
+    for (PdfAnnotation &annotation : m_annotations) {
+        if (!annotation.selected) {
+            continue;
+        }
+        if (annotation.kind != PdfAnnotationKind::Signature
+            && annotation.kind != PdfAnnotationKind::FreeText) {
+            return false;
+        }
+
+        for (QRectF &rect : annotation.pageRects) {
+            rect.translate(pageDelta);
+        }
+        return true;
+    }
+
+    return false;
+}
+
+bool AnnotationModel::resizeSelectedFreeText(const QSizeF &pageDelta, const QSizeF &minimumSize)
+{
+    for (PdfAnnotation &annotation : m_annotations) {
+        if (!annotation.selected) {
+            continue;
+        }
+        if (annotation.kind != PdfAnnotationKind::FreeText || annotation.pageRects.isEmpty()) {
+            return false;
+        }
+
+        QRectF &rect = annotation.pageRects[0];
+        rect.setSize(QSizeF(qMax(minimumSize.width(), rect.width() + pageDelta.width()),
+                            qMax(minimumSize.height(), rect.height() + pageDelta.height())));
+        return true;
+    }
+
+    return false;
+}
+
+bool AnnotationModel::remapPages(const QVector<int> &newOrder)
+{
+    QVector<PdfAnnotation> remappedAnnotations;
+    remappedAnnotations.reserve(m_annotations.size());
+
+    for (const PdfAnnotation &annotation : std::as_const(m_annotations)) {
+        const int newPageIndex = newOrder.indexOf(annotation.pageIndex);
+        if (newPageIndex < 0) {
+            continue;
+        }
+
+        PdfAnnotation remapped = annotation;
+        remapped.pageIndex = newPageIndex;
+        remappedAnnotations.append(remapped);
+    }
+
+    m_annotations = remappedAnnotations;
+    return true;
+}
+
 void AnnotationModel::clearSelection()
 {
     for (PdfAnnotation &annotation : m_annotations) {

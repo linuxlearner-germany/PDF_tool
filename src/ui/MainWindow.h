@@ -5,6 +5,7 @@
 #include <QMainWindow>
 #include <QPoint>
 #include <QPointF>
+#include <QVector>
 
 #include "document/PdfDocumentTypes.h"
 
@@ -13,6 +14,8 @@ class QLabel;
 class QLineEdit;
 class QListView;
 class QDockWidget;
+class QPushButton;
+class QSpinBox;
 class QTextEdit;
 class QTabWidget;
 class QToolBar;
@@ -34,6 +37,7 @@ public:
 
 private slots:
     void openPdf();
+    void saveDocument();
     void triggerSearch();
     void showMetadataDialog();
     void mergePdfFiles();
@@ -46,6 +50,7 @@ private slots:
     void runOcrCurrentPage();
     void runOcrSelection();
     void showOcrResult(const QString &title, const QString &text);
+    void updateHistoryActions(bool canUndo, bool canRedo);
     void requestNoteAnnotation();
     void editSelectedNoteAnnotation();
     void requestFreeTextAnnotation();
@@ -60,6 +65,10 @@ private slots:
     void updateSelectionDependentActions(bool hasSelection);
     void updateOverlaySelectionActions(bool hasSelection);
     void updateSearchState(bool hasResults, int currentHit, int totalHits, const QString &statusText);
+    void jumpToPage(int pageNumber);
+    void moveCurrentPageLeft();
+    void moveCurrentPageRight();
+    void deleteCurrentPage();
     void navigateToSidebarPage(const QModelIndex &index);
     void navigateToOutlineItem(QTreeWidgetItem *item, int column);
     void focusSearchField();
@@ -84,6 +93,7 @@ private:
     void saveThemeSetting(ThemeMode mode) const;
     QWidget *createToolbarSpacer(int width = 16) const;
     QLabel *createStatusPill(const QString &text, const QString &objectName) const;
+    bool applyPageOrderChange(const QVector<int> &newOrder, int reopenedPageIndex, const QString &successMessage);
     void refreshNavigationPanels();
     void populateOutlineTree(const QVector<PdfOutlineEntry> &entries, QTreeWidgetItem *parentItem = nullptr);
     void syncThumbnailSelection(int pageIndex);
@@ -93,6 +103,9 @@ private:
     QListView *m_pageListView {nullptr};
     QTreeWidget *m_outlineTreeWidget {nullptr};
     QLineEdit *m_searchEdit {nullptr};
+    QPushButton *m_searchButton {nullptr};
+    QSpinBox *m_pageJumpSpinBox {nullptr};
+    QLabel *m_pageCountHintLabel {nullptr};
     QLabel *m_documentStatusLabel {nullptr};
     QLabel *m_modeStatusLabel {nullptr};
     QLabel *m_zoomLabel {nullptr};
@@ -100,12 +113,14 @@ private:
     QLabel *m_searchStatusLabel {nullptr};
     QDockWidget *m_navigationDock {nullptr};
     QToolBar *m_mainToolBar {nullptr};
+    QToolBar *m_toolsToolBar {nullptr};
     std::unique_ptr<PdfDocumentController> m_documentController;
     std::unique_ptr<QPdfOperations> m_pdfOperations;
     PageThumbnailListModel *m_pageThumbnailModel {nullptr};
     QPointF m_lastContextImagePoint;
 
     QAction *m_openAction {nullptr};
+    QAction *m_saveAction {nullptr};
     QAction *m_mergePdfsAction {nullptr};
     QAction *m_splitPdfAction {nullptr};
     QAction *m_exportEncryptedPdfAction {nullptr};
@@ -120,6 +135,8 @@ private:
     QAction *m_previousPageAction {nullptr};
     QAction *m_nextPageAction {nullptr};
     QAction *m_copyAction {nullptr};
+    QAction *m_undoAction {nullptr};
+    QAction *m_redoAction {nullptr};
     QAction *m_deleteOverlayAction {nullptr};
     QAction *m_highlightSelectionAction {nullptr};
     QAction *m_rectangleAnnotationAction {nullptr};
@@ -138,5 +155,8 @@ private:
     QAction *m_insertSignatureAction {nullptr};
     QAction *m_runOcrCurrentPageAction {nullptr};
     QAction *m_runOcrSelectionAction {nullptr};
+    QAction *m_movePageLeftAction {nullptr};
+    QAction *m_movePageRightAction {nullptr};
+    QAction *m_deletePageAction {nullptr};
     ThemeMode m_themeMode {ThemeMode::Light};
 };

@@ -43,6 +43,7 @@ set(PDF_TOOL_SOURCES
     src/services/OcrService.cpp
     src/rendering/PopplerAdapter.cpp
     src/operations/QPdfOperations.cpp
+    resources/icons.qrc
 )
 
 set(PDF_TOOL_HEADERS

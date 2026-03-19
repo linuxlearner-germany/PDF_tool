@@ -3,6 +3,7 @@ PDFTool_autogen/timestamp: \
 	/home/paul/Nextcloud/PDF_tool/build-local/CMakeFiles/3.31.6/CMakeCXXCompiler.cmake \
 	/home/paul/Nextcloud/PDF_tool/build-local/CMakeFiles/3.31.6/CMakeSystem.cmake \
 	/home/paul/Nextcloud/PDF_tool/build-local/PDFTool_autogen/moc_predefs.h \
+	/home/paul/Nextcloud/PDF_tool/resources/icons.qrc \
 	/home/paul/Nextcloud/PDF_tool/src/document/AnnotationModel.cpp \
 	/home/paul/Nextcloud/PDF_tool/src/document/AnnotationModel.h \
 	/home/paul/Nextcloud/PDF_tool/src/document/FormFieldModel.cpp \
@@ -295,6 +296,7 @@ PDFTool_autogen/timestamp: \
 	/usr/include/x86_64-linux-gnu/qt6/QtCore/QAbstractListModel \
 	/usr/include/x86_64-linux-gnu/qt6/QtCore/QByteArray \
 	/usr/include/x86_64-linux-gnu/qt6/QtCore/QJsonArray \
+	/usr/include/x86_64-linux-gnu/qt6/QtCore/QJsonObject \
 	/usr/include/x86_64-linux-gnu/qt6/QtCore/QList \
 	/usr/include/x86_64-linux-gnu/qt6/QtCore/QModelIndex \
 	/usr/include/x86_64-linux-gnu/qt6/QtCore/QObject \
@@ -369,6 +371,7 @@ PDFTool_autogen/timestamp: \
 	/usr/include/x86_64-linux-gnu/qt6/QtCore/qiterable.h \
 	/usr/include/x86_64-linux-gnu/qt6/QtCore/qiterator.h \
 	/usr/include/x86_64-linux-gnu/qt6/QtCore/qjsonarray.h \
+	/usr/include/x86_64-linux-gnu/qt6/QtCore/qjsonobject.h \
 	/usr/include/x86_64-linux-gnu/qt6/QtCore/qjsonvalue.h \
 	/usr/include/x86_64-linux-gnu/qt6/QtCore/qlatin1stringview.h \
 	/usr/include/x86_64-linux-gnu/qt6/QtCore/qline.h \
@@ -495,6 +498,7 @@ PDFTool_autogen/timestamp: \
 	/usr/include/x86_64-linux-gnu/qt6/QtWidgets/QGraphicsProxyWidget \
 	/usr/include/x86_64-linux-gnu/qt6/QtWidgets/QGraphicsRectItem \
 	/usr/include/x86_64-linux-gnu/qt6/QtWidgets/QGraphicsScene \
+	/usr/include/x86_64-linux-gnu/qt6/QtWidgets/QGraphicsTextItem \
 	/usr/include/x86_64-linux-gnu/qt6/QtWidgets/QGraphicsView \
 	/usr/include/x86_64-linux-gnu/qt6/QtWidgets/QMainWindow \
 	/usr/include/x86_64-linux-gnu/qt6/QtWidgets/qabstractscrollarea.h \

@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=PDF Tool
+Comment=PDF anzeigen und bearbeiten
+Exec=/usr/bin/pdf-tool %F
+Icon=pdftool
+Terminal=false
+Categories=Office;Viewer;Utility;
+MimeType=application/pdf;
+StartupNotify=true

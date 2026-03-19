@@ -22,6 +22,9 @@ public:
     bool remove(const QString &annotationId);
     bool setColor(const QString &annotationId, const QColor &color);
     bool setText(const QString &annotationId, const QString &text);
+    bool translateSelected(const QPointF &pageDelta);
+    bool resizeSelectedFreeText(const QSizeF &pageDelta, const QSizeF &minimumSize = QSizeF(48.0, 24.0));
+    bool remapPages(const QVector<int> &newOrder);
     void clearSelection();
     bool selectAt(int pageIndex, const QPointF &pagePoint);
     QString selectedAnnotationId() const;

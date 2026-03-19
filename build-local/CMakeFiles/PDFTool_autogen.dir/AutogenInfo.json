@@ -238,7 +238,8 @@
 		"/usr/share/cmake-3.31/Modules/FindPkgConfig.cmake",
 		"/usr/share/cmake-3.31/Modules/FindPackageHandleStandardArgs.cmake",
 		"/usr/share/cmake-3.31/Modules/FindPackageMessage.cmake",
-		"/usr/share/cmake-3.31/Modules/GNUInstallDirs.cmake"
+		"/usr/share/cmake-3.31/Modules/GNUInstallDirs.cmake",
+		"/home/paul/Nextcloud/PDF_tool/resources/icons.qrc"
 	],
 	"CMAKE_SOURCE_DIR" : "/home/paul/Nextcloud/PDF_tool",
 	"CROSS_CONFIG" : false,
