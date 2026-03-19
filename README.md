@@ -1,136 +1,90 @@
 # PDFTool
 
-Desktop-PDF-Viewer und PDF-Bearbeitungstool auf Basis von Qt 6, CMake, Poppler und qpdf.
+Linux-Desktop-App zum Ansehen, Kommentieren, Redigieren und Exportieren von PDFs.
+Das Projekt basiert auf `Qt 6`, `Poppler` und optional `qpdf` fuer weitergehende PDF-Operationen.
 
-PDFTool ist ein pragmatisches Linux-Desktop-Projekt mit Fokus auf produktive PDF-Arbeit:
-- PDFs oeffnen und lesen
-- Seiten, Outline und Suche nutzen
-- markieren, kommentieren und redigieren
-- Text sichtbar ersetzen
-- OCR auf Seiten oder Bereichen ausfuehren
-- Unterschriften als Bild einfuegen
-- neue bearbeitete PDFs exportieren
+## Ueberblick
 
-## Status
+PDFTool richtet sich an lokale Desktop-Workflows, bei denen PDFs nicht nur gelesen, sondern direkt bearbeitet werden sollen:
 
-Das Projekt ist deutlich ueber ein MVP hinaus und laeuft aktuell als fortgeschrittener Desktop-Viewer/Editor mit Overlay-basierter Bearbeitung und Exportpfaden fuer dauerhaft veraenderte PDFs.
+- PDFs oeffnen, lesen und durchsuchen
+- Seiten und Bookmarks schnell navigieren
+- Bereiche markieren, kommentieren und schwaerzen
+- sichtbare Textersetzungen als Overlay anlegen
+- OCR auf Seiten oder Auswahlbereichen ausfuehren
+- Signaturen als Bild einfuegen
+- bearbeitete oder redigierte PDFs als neues Dokument exportieren
 
 Wichtig:
-- direkte semantische Bearbeitung des internen PDF-Textstroms ist nicht implementiert
-- Textaenderungen, Signaturen, Formularwerte und Redactions werden ueber Overlays verwaltet
-- mit `Bearbeitetes PDF exportieren...` werden diese Aenderungen dauerhaft in ein neues PDF eingebrannt
 
-## Features
+- Das Original-PDF wird nicht "live" semantisch umgeschrieben.
+- Viele Aenderungen werden intern als Overlays bzw. Sidecar-Daten verwaltet.
+- Mit dem Export werden diese Aenderungen dauerhaft in ein neues PDF uebernommen.
 
-### Dokument und Navigation
+## Feature-Set
 
-- PDF oeffnen
-- Rendern ueber Poppler
-- Zoom
-- Scrollen und Seitenwechsel per Mausrad
+### Viewer und Navigation
+
+- PDF-Rendering ueber Poppler
+- Zoom, Scrollen und Seitenwechsel per Mausrad
 - `Ctrl + Mausrad` fuer Zoom
 - Seitenleiste mit Thumbnails
-- aktive Seite in der Seitenleiste hervorgehoben
 - Outline / Bookmarks
 - Metadaten-Dialog
 - Drucken
 
-### Auswahl, Suche und Bearbeitung
+### Bearbeitung und Annotationen
 
-- Rechteckauswahl
-- Textselektion innerhalb einer Auswahl
-- `Ctrl+C` fuer Copy
-- dokumentweite Suche mit Highlighting
+- Rechteckauswahl und Textselektion
+- `Ctrl+C` fuer Kopieren
+- Dokumentweite Suche mit Hervorhebung
 - Highlight-Annotationen
 - Rechteck-Annotationen
-- Textnotizen
-- freie Textfelder
-- sichtbares Text-Ersetzen innerhalb einer Auswahl
-- Farbaenderung und Loeschen fuer ausgewaehlte Annotationen
+- Textnotizen und freie Textfelder
+- sichtbares Text-Ersetzen in Auswahlbereichen
+- Farben aendern und ausgewaehlte Annotationen loeschen
 
 ### Formulare
 
-- Textfelder aus PDFs auslesen
-- Checkboxen aus PDFs auslesen
+- PDF-Textfelder auslesen
+- Checkboxen auslesen
 - Formularwerte im Viewer bearbeiten
 - Formularzustand per Sidecar-Datei sichern
 
 ### Redaction
 
-- Auswahlbereiche schwaerzen
+- Bereiche zur Schwaerzung markieren
 - schwarze Redaction-Overlays im Viewer
 - Export als dauerhaft geschwaerztes PDF
 
 ### OCR
 
-- OCR fuer aktuelle Seite
-- OCR fuer Auswahlbereich
-- OCR-Ergebnisdialog mit Copy-Funktion
+- OCR fuer die aktuelle Seite
+- OCR fuer einen Auswahlbereich
+- Ergebnisdialog mit Copy-Funktion
 - lokale Ausfuehrung ueber `tesseract`
 
-### Unterschriften
-
-- Unterschrift als Bilddatei einfuegen
-- Platzierung auf Auswahl oder an Klickposition
-- Persistenz ueber Sidecar-Datei
-- Export in bearbeitetes PDF
-
-### PDF-Operationen
+### Weitere PDF-Operationen
 
 - PDFs zusammenfuehren
 - PDFs aufteilen
 - passwortgeschuetzte PDFs oeffnen
-- verschluesseltes PDF exportieren
+- verschluesselte PDFs exportieren
 
-### UI
+## Status
 
-- ueberarbeitete Desktop-Oberflaeche
-- umschaltbarer Light/Dark Mode
-- Theme-Auswahl wird gespeichert
-- Statusleiste mit Dokument-, Modus-, Seiten-, Zoom- und Suchstatus
+Das Projekt ist deutlich ueber ein MVP hinaus und funktioniert bereits als produktiver Desktop-Viewer mit Bearbeitungs- und Export-Workflow.
 
-## Architektur
+Aktuell nicht enthalten:
 
-Die bestehende Architektur ist bewusst getrennt gehalten:
+- echte semantische PDF-Textbearbeitung mit Reflow
+- kryptografische PDF-Signaturen
+- OCR-Export als echter durchsuchbarer Textlayer
+- natives Speichern von Annotationen direkt im PDF
 
-- `src/ui`
-  UI-Komponenten wie `MainWindow`, `PdfView`, Thumbnail-Liste
-- `src/document`
-  Controller und Dokumentmodelle fuer Annotationen, Formulare, Suche, Redactions
-- `src/rendering`
-  Render-Backend ueber Poppler
-- `src/operations`
-  qpdf-basierte Operationen wie Merge, Split, Verschluesselung
-- `src/services`
-  Zusatzdienste wie OCR
+## Schnellstart
 
-Wichtige Kernklassen:
-- `PdfDocumentController`
-- `PopplerAdapter`
-- `PdfView`
-- `AnnotationModel`
-- `FormFieldModel`
-- `RedactionModel`
-- `OcrService`
-
-## Sidecar-Dateien
-
-PDFTool speichert nicht alle Aenderungen direkt ins Original-PDF. Stattdessen wird zusaetzlich eine Sidecar-Datei neben dem PDF abgelegt:
-
-```text
-dein_dokument.pdf.annotations.json
-```
-
-Darueber werden aktuell unter anderem gespeichert:
-- Annotationen
-- freie Textfelder
-- Signaturen
-- Formularwerte
-- Redactions
-
-## Voraussetzungen
-
-### Pflichtabhaengigkeiten
+### Voraussetzungen
 
 Beispiel fuer Debian/Ubuntu:
 
@@ -147,17 +101,13 @@ sudo apt install \
   zlib1g-dev
 ```
 
-### Optionale Abhaengigkeiten
-
-Fuer OCR:
+Optional fuer OCR:
 
 ```bash
 sudo apt install tesseract-ocr tesseract-ocr-deu tesseract-ocr-eng
 ```
 
-## Build
-
-### Build gegen Systempakete
+### Build
 
 ```bash
 cmake -S . -B build -G Ninja
@@ -165,9 +115,9 @@ cmake --build build
 ./build/PDFTool
 ```
 
-### Build gegen lokale Dependencies
+### Build mit lokalen Dependencies
 
-Das Projekt kann auch mit der vorhandenen `.localdeps`-Struktur gebaut werden:
+Wenn die vorhandene `.localdeps`-Struktur genutzt werden soll:
 
 ```bash
 cmake -S . -B build-local -G Ninja
@@ -179,51 +129,48 @@ cmake --build build-local
 
 ### Lokale Installation per Installer
 
-Der Installer liegt im Ordner `installer/` und kann das Projekt direkt aus GitHub klonen, bauen und lokal installieren.
+Im Ordner `installer/` liegt ein Installer, der das Projekt aus GitHub klonen, bauen und lokal nach `~/.local` installieren kann.
 
-Wichtig:
-- den Installer nicht mit `sudo` starten
-- sonst wird nach `/root/.local/...` statt nach deinem Benutzer installiert
-
-Empfohlener Aufruf:
+Empfohlen:
 
 ```bash
 cd installer
 bash install.sh
 ```
 
-Wenn Abhaengigkeiten fehlen, bietet das Skript unter Debian/Ubuntu direkt eine Installation an.
+Wichtig:
 
-Ohne Rueckfrage:
+- das Skript nicht mit `sudo` starten
+- sonst landet die Installation unter `/root/.local/...`
+
+Ohne Rueckfrage fehlende Pakete installieren:
 
 ```bash
 cd installer
 AUTO_INSTALL_DEPS=1 bash install.sh
 ```
 
-Optional mit bestimmtem Branch:
+Bestimmten Branch installieren:
 
 ```bash
 cd installer
 REPO_BRANCH=main bash install.sh
 ```
 
-### Debian-Paket
-
-Ein Debian-Paket kann mit dem lokalen Checkout gebaut werden:
+### Debian-Paket bauen
 
 ```bash
 cd installer
 ./build_deb.sh
 ```
 
-Ausgabe:
+Das Paket wird anschliessend unter `installer/dist/` erzeugt, derzeit typischerweise als:
 
 ```text
 installer/dist/pdf-tool_0.1.0_amd64.deb
 ```
 
-Installation des Pakets:
+Installation:
 
 ```bash
 sudo dpkg -i installer/dist/pdf-tool_0.1.0_amd64.deb
@@ -231,23 +178,39 @@ sudo dpkg -i installer/dist/pdf-tool_0.1.0_amd64.deb
 
 ## Starten
 
-### Nach lokaler Installation
+Nach lokaler Installation:
 
 ```bash
 ~/.local/bin/pdf-tool
 ```
 
-Wenn `~/.local/bin` in deinem `PATH` liegt, reicht auch:
+Falls `~/.local/bin` im `PATH` liegt, reicht auch:
 
 ```bash
 pdf-tool
 ```
 
-### Direkt aus dem Build
+Direkt aus dem Build:
 
 ```bash
-./build-local/PDFTool
+./build/PDFTool
 ```
+
+## Sidecar-Dateien
+
+Nicht alle Bearbeitungen werden direkt im Original-PDF gespeichert. PDFTool legt dafuer Sidecar-Dateien neben dem Dokument an, zum Beispiel:
+
+```text
+dein_dokument.pdf.annotations.json
+```
+
+Darin werden aktuell unter anderem abgelegt:
+
+- Annotationen
+- freie Textfelder
+- Signaturen
+- Formularwerte
+- Redactions
 
 ## Bedienung
 
@@ -268,19 +231,15 @@ pdf-tool
 
 1. PDF oeffnen
 2. Bereich auswaehlen
-3. je nach Bedarf:
-   - Text hervorheben
-   - Text ersetzen
-   - Redaction markieren
-   - OCR auf Auswahl ausfuehren
-   - Signatur in Auswahl platzieren
+3. Aktion ausfuehren, zum Beispiel Highlight, Textersetzung, Redaction, OCR oder Signatur
 4. `Bearbeitetes PDF exportieren...` oder `Geschwaerztes PDF exportieren...`
 
-## Exportmodi
+## Export
 
 ### Bearbeitetes PDF exportieren
 
-Erzeugt ein neues PDF mit eingebrannten:
+Exportiert ein neues PDF mit eingebrannten:
+
 - Text-Overlays
 - Signaturen
 - Formularwerten
@@ -289,32 +248,19 @@ Erzeugt ein neues PDF mit eingebrannten:
 
 ### Geschwaerztes PDF exportieren
 
-Erzeugt ein neues PDF, bei dem Redactions dauerhaft schwarz ausgegeben werden.
+Erzeugt ein neues PDF, in dem markierte Redactions dauerhaft schwarz ausgegeben werden.
 
-## Bekannte Grenzen
+## Architektur
 
-- keine echte semantische PDF-Textbearbeitung mit Reflow
-- keine kryptografischen PDF-Signaturen
-- OCR erzeugt aktuell keinen echten durchsuchbaren PDF-Textlayer
-- Formularwerte werden aktuell nicht ins Original-PDF zurueckgeschrieben
-- Annotationen werden nicht als native PDF-Annotationen gespeichert, sondern per Sidecar verwaltet
+Die Codebasis ist bewusst in klar getrennte Bereiche aufgeteilt:
 
-## Roadmap
+- `src/ui` fuer Fenster, View und Navigation
+- `src/document` fuer Controller, Modelle und Bearbeitungszustand
+- `src/rendering` fuer das Render-Backend auf Basis von Poppler
+- `src/operations` fuer qpdf-basierte PDF-Operationen
+- `src/services` fuer Zusatzdienste wie OCR
 
-Sinnvolle naechste Schritte:
-
-- echte PDF-Annotation-Writes
-- OCR-Textlayer im Export
-- digitale Signaturen / Zertifikate
-- Drag/Resize fuer Textfelder und Signaturen
-- Undo/Redo
-- Performance-Optimierung fuer grosse PDFs
-
-## Entwicklung
-
-Das Projekt wurde schrittweise erweitert, ohne die Grundarchitektur neu zu schreiben. Ziel ist ein sauberer Ausbau statt eines Voll-Rewrites.
-
-Wenn du am Projekt weiterarbeiten willst, sind diese Dateien die wichtigsten Einstiegsstellen:
+Zentrale Einstiegspunkte:
 
 - `src/ui/MainWindow.cpp`
 - `src/ui/PdfView.cpp`
@@ -322,16 +268,38 @@ Wenn du am Projekt weiterarbeiten willst, sind diese Dateien die wichtigsten Ein
 - `src/rendering/PopplerAdapter.cpp`
 - `src/operations/QPdfOperations.cpp`
 
+## Projektstruktur
+
+```text
+.
++-- CMakeLists.txt
++-- README.md
++-- installer/
++-- resources/
+`-- src/
+    +-- document/
+    +-- operations/
+    +-- rendering/
+    +-- services/
+    `-- ui/
+```
+
+## Roadmap
+
+Sinnvolle naechste Schritte:
+
+- native PDF-Annotationen schreiben
+- OCR-Textlayer im Export erzeugen
+- digitale Signaturen / Zertifikate
+- Drag/Resize fuer Textfelder und Signaturen
+- Undo/Redo
+- Performance fuer grosse PDFs verbessern
+
+## Entwicklung
+
+Der Fokus liegt auf einem pragmatischen Desktop-Workflow statt auf einem kompletten PDF-Editor-Rewrite.
+Falls du am Projekt weiterarbeiten willst, sind die Kernpfade in `src/ui`, `src/document`, `src/rendering`, `src/operations` und `src/services` die relevanten Einstiegspunkte.
+
 ## Haftungsausschluss
 
-Die Nutzung dieser Software erfolgt auf eigene Verantwortung.
-
-Ich uebernehme keine Haftung fuer:
-- Datenverlust
-- beschaedigte oder unbrauchbar gewordene PDF-Dateien
-- fehlerhafte OCR-Ergebnisse
-- fehlerhafte Exportergebnisse
-- Sicherheitsluecken, Sicherheitsfehler oder sonstige Schwachstellen
-- rechtliche oder technische Folgen durch den Einsatz der Software
-
-Insbesondere bei Bearbeitung, Redaction, OCR, Verschluesselung, Signaturen und Exporten sollte die Software nicht ohne eigene Pruefung in produktiven oder rechtlich sensiblen Workflows eingesetzt werden.
+Die Nutzung erfolgt auf eigene Verantwortung. Vor allem bei Redaction, OCR, Export, Verschluesselung und produktiven Dokument-Workflows sollten Ergebnisse immer manuell geprueft werden.
