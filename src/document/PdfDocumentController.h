@@ -2,6 +2,7 @@
 
 #include <memory>
 
+#include <QByteArray>
 #include <QObject>
 #include <QColor>
 #include <QImage>
@@ -51,6 +52,7 @@ public:
     bool hasTextSelection() const;
     bool hasAreaSelection() const;
     QString selectedText() const;
+    bool isOcrAvailable() const;
     bool hasSearchResults() const;
     QString searchQuery() const;
     bool requiresPassword() const;
@@ -66,6 +68,7 @@ public:
     QString selectedNoteText() const;
     bool hasSelectedTextEditAnnotation() const;
     QString selectedTextEditText() const;
+    bool hasSelectedSignatureAnnotation() const;
     QPixmap thumbnailForPage(int pageIndex, const QSize &targetSize);
     void setThumbnailSize(const QSize &size);
 
@@ -88,6 +91,8 @@ public slots:
     void addNoteAnnotationAt(const QPointF &imagePoint, const QString &noteText);
     void addFreeTextAt(const QPointF &imagePoint, const QString &text);
     void replaceSelectedText(const QString &text);
+    void addSignatureFromImageAt(const QPointF &imagePoint, const QImage &signatureImage);
+    void addSignatureFromImageToSelection(const QImage &signatureImage);
     void selectOverlayAt(const QPointF &imagePoint);
     void deleteSelectedOverlay();
     void setSelectedAnnotationColor(const QColor &color);
@@ -103,6 +108,8 @@ public slots:
     void setFormFieldChecked(const QString &fieldId, bool checked);
 
     void addRedactionFromSelection();
+    void runOcrOnCurrentPage();
+    void runOcrOnSelection();
 
 signals:
     void documentStateChanged(bool hasDocument);
@@ -120,6 +127,7 @@ signals:
     void errorOccurred(const QString &message);
     void statusMessageChanged(const QString &message);
     void busyStateChanged(bool busy, const QString &message);
+    void ocrFinished(const QString &title, const QString &text);
 
 private:
     QString annotationSidecarPath() const;

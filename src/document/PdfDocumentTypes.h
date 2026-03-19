@@ -1,5 +1,6 @@
 #pragma once
 
+#include <QByteArray>
 #include <QColor>
 #include <QRectF>
 #include <QString>
@@ -36,7 +37,8 @@ enum class PdfAnnotationKind
     Highlight,
     Rectangle,
     Note,
-    FreeText
+    FreeText,
+    Signature
 };
 
 struct PdfAnnotation
@@ -47,6 +49,7 @@ struct PdfAnnotation
     QVector<QRectF> pageRects;
     QColor color {255, 235, 59, 110};
     QString text;
+    QByteArray binaryPayload;
     bool selected {false};
 };
 
@@ -57,6 +60,7 @@ struct PdfAnnotationOverlay
     QVector<QRectF> imageRects;
     QColor color;
     QString text;
+    QByteArray binaryPayload;
     bool selected {false};
 };
 

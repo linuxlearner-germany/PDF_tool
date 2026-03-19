@@ -23,6 +23,8 @@ PDFTool_autogen/timestamp: \
 	/home/paul/Nextcloud/PDF_tool/src/rendering/PdfRenderEngine.h \
 	/home/paul/Nextcloud/PDF_tool/src/rendering/PopplerAdapter.cpp \
 	/home/paul/Nextcloud/PDF_tool/src/rendering/PopplerAdapter.h \
+	/home/paul/Nextcloud/PDF_tool/src/services/OcrService.cpp \
+	/home/paul/Nextcloud/PDF_tool/src/services/OcrService.h \
 	/home/paul/Nextcloud/PDF_tool/src/ui/MainWindow.cpp \
 	/home/paul/Nextcloud/PDF_tool/src/ui/MainWindow.h \
 	/home/paul/Nextcloud/PDF_tool/src/ui/PageThumbnailListModel.cpp \
@@ -291,6 +293,7 @@ PDFTool_autogen/timestamp: \
 	/usr/include/x86_64-linux-gnu/gnu/stubs-64.h \
 	/usr/include/x86_64-linux-gnu/gnu/stubs.h \
 	/usr/include/x86_64-linux-gnu/qt6/QtCore/QAbstractListModel \
+	/usr/include/x86_64-linux-gnu/qt6/QtCore/QByteArray \
 	/usr/include/x86_64-linux-gnu/qt6/QtCore/QJsonArray \
 	/usr/include/x86_64-linux-gnu/qt6/QtCore/QList \
 	/usr/include/x86_64-linux-gnu/qt6/QtCore/QModelIndex \

@@ -17,6 +17,7 @@ public:
     bool addRectangle(int pageIndex, const QRectF &pageRect);
     bool addNote(int pageIndex, const QRectF &pageRect, const QString &text);
     bool addFreeText(int pageIndex, const QRectF &pageRect, const QString &text);
+    bool addSignature(int pageIndex, const QRectF &pageRect, const QByteArray &imageBytes);
 
     bool remove(const QString &annotationId);
     bool setColor(const QString &annotationId, const QColor &color);

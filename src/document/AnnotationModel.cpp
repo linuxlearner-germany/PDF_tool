@@ -99,6 +99,25 @@ bool AnnotationModel::addFreeText(int pageIndex, const QRectF &pageRect, const Q
     return true;
 }
 
+bool AnnotationModel::addSignature(int pageIndex, const QRectF &pageRect, const QByteArray &imageBytes)
+{
+    if (pageIndex < 0 || pageRect.isEmpty() || imageBytes.isEmpty()) {
+        return false;
+    }
+
+    PdfAnnotation annotation;
+    annotation.id = generateAnnotationId();
+    annotation.kind = PdfAnnotationKind::Signature;
+    annotation.pageIndex = pageIndex;
+    annotation.pageRects = { pageRect.normalized() };
+    annotation.binaryPayload = imageBytes;
+
+    clearSelection();
+    annotation.selected = true;
+    m_annotations.append(annotation);
+    return true;
+}
+
 bool AnnotationModel::remove(const QString &annotationId)
 {
     for (qsizetype index = 0; index < m_annotations.size(); ++index) {
@@ -237,6 +256,9 @@ QJsonArray AnnotationModel::toJson() const
         annotationObject.insert(QStringLiteral("pageIndex"), annotation.pageIndex);
         annotationObject.insert(QStringLiteral("text"), annotation.text);
         annotationObject.insert(QStringLiteral("color"), annotation.color.name(QColor::HexArgb));
+        if (!annotation.binaryPayload.isEmpty()) {
+            annotationObject.insert(QStringLiteral("binaryPayload"), QString::fromLatin1(annotation.binaryPayload.toBase64()));
+        }
 
         QJsonArray rectsArray;
         for (const QRectF &rect : annotation.pageRects) {
@@ -271,6 +293,8 @@ bool AnnotationModel::fromJson(const QJsonArray &annotationsArray)
         annotation.pageIndex = annotationObject.value(QStringLiteral("pageIndex")).toInt(-1);
         annotation.text = annotationObject.value(QStringLiteral("text")).toString();
         annotation.color = QColor(annotationObject.value(QStringLiteral("color")).toString(QStringLiteral("#6EFFEB3B")));
+        annotation.binaryPayload = QByteArray::fromBase64(
+            annotationObject.value(QStringLiteral("binaryPayload")).toString().toLatin1());
 
         const QJsonArray rectsArray = annotationObject.value(QStringLiteral("rects")).toArray();
         for (const QJsonValue &rectValue : rectsArray) {

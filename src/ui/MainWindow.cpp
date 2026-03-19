@@ -4,6 +4,7 @@
 
 #include <QAction>
 #include <QApplication>
+#include <QClipboard>
 #include <QColorDialog>
 #include <QDialog>
 #include <QDialogButtonBox>
@@ -11,6 +12,7 @@
 #include <QFileDialog>
 #include <QFileInfo>
 #include <QFormLayout>
+#include <QGuiApplication>
 #include <QInputDialog>
 #include <QItemSelectionModel>
 #include <QLabel>
@@ -24,11 +26,13 @@
 #include <QStatusBar>
 #include <QStyle>
 #include <QTabWidget>
+#include <QTextEdit>
 #include <QToolBar>
 #include <QTreeWidget>
 #include <QTreeWidgetItem>
 #include <QVBoxLayout>
 #include <QWidget>
+#include <QPushButton>
 
 #include <QtPrintSupport/QPrintDialog>
 #include <QtPrintSupport/QPrinter>
@@ -146,6 +150,8 @@ MainWindow::MainWindow(QWidget *parent)
             this, [this](const QString &message) {
                 statusBar()->showMessage(message, 4000);
             });
+    connect(m_documentController.get(), &PdfDocumentController::ocrFinished,
+            this, &MainWindow::showOcrResult);
     connect(m_documentController.get(), &PdfDocumentController::busyStateChanged,
             this, [this](bool busy, const QString &message) {
                 if (busy) {
@@ -449,6 +455,72 @@ void MainWindow::printDocument()
     m_documentController->printDocument(&printer);
 }
 
+void MainWindow::insertSignature()
+{
+    if (!m_documentController->hasDocument()) {
+        return;
+    }
+
+    const QString filePath = QFileDialog::getOpenFileName(
+        this,
+        QStringLiteral("Unterschrift auswählen"),
+        QString(),
+        QStringLiteral("Bilder (*.png *.jpg *.jpeg *.bmp)")
+    );
+
+    if (filePath.isEmpty()) {
+        return;
+    }
+
+    const QImage signatureImage(filePath);
+    if (signatureImage.isNull()) {
+        showError(QStringLiteral("Unterschriftsbild konnte nicht geladen werden."));
+        return;
+    }
+
+    if (m_documentController->hasAreaSelection()) {
+        m_documentController->addSignatureFromImageToSelection(signatureImage);
+    } else {
+        m_documentController->addSignatureFromImageAt(m_lastContextImagePoint, signatureImage);
+    }
+}
+
+void MainWindow::runOcrCurrentPage()
+{
+    m_documentController->runOcrOnCurrentPage();
+}
+
+void MainWindow::runOcrSelection()
+{
+    m_documentController->runOcrOnSelection();
+}
+
+void MainWindow::showOcrResult(const QString &title, const QString &text)
+{
+    QDialog dialog(this);
+    dialog.setWindowTitle(title);
+    dialog.resize(720, 520);
+
+    auto *layout = new QVBoxLayout(&dialog);
+    auto *textEdit = new QTextEdit(&dialog);
+    textEdit->setPlainText(text);
+    layout->addWidget(textEdit);
+
+    auto *buttons = new QDialogButtonBox(QDialogButtonBox::Close, &dialog);
+    auto *copyButton = buttons->addButton(QStringLiteral("In Zwischenablage"), QDialogButtonBox::ActionRole);
+    connect(copyButton, &QPushButton::clicked, this, [text]() {
+        if (QClipboard *clipboard = QGuiApplication::clipboard()) {
+            clipboard->setText(text, QClipboard::Clipboard);
+            clipboard->setText(text, QClipboard::Selection);
+        }
+    });
+    connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
+    connect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
+    layout->addWidget(buttons);
+
+    dialog.exec();
+}
+
 void MainWindow::requestNoteAnnotation()
 {
     if (!m_documentController->hasDocument()) {
@@ -609,6 +681,10 @@ void MainWindow::updateUiState(bool hasDocument)
     m_findAction->setEnabled(hasDocument);
     m_clearSearchAction->setEnabled(hasDocument && m_documentController->hasSearchResults());
     m_searchEdit->setEnabled(hasDocument);
+    m_insertSignatureAction->setEnabled(hasDocument);
+    m_runOcrCurrentPageAction->setEnabled(hasDocument && m_documentController->isOcrAvailable());
+    m_runOcrSelectionAction->setEnabled(hasDocument && m_documentController->isOcrAvailable()
+                                        && m_documentController->hasAreaSelection());
     m_rectangleAnnotationAction->setEnabled(hasDocument);
     m_noteAnnotationAction->setEnabled(hasDocument);
     m_addTextAction->setEnabled(hasDocument);
@@ -641,6 +717,9 @@ void MainWindow::updateSelectionDependentActions(bool hasSelection)
     m_copyAction->setEnabled(hasSelection);
     m_highlightSelectionAction->setEnabled(hasSelection);
     m_replaceSelectedTextAction->setEnabled(hasSelection || m_documentController->hasAreaSelection());
+    m_runOcrSelectionAction->setEnabled(m_documentController->hasDocument()
+                                        && m_documentController->isOcrAvailable()
+                                        && m_documentController->hasAreaSelection());
     if (m_modeStatusLabel) {
         m_modeStatusLabel->setText(hasSelection ? QStringLiteral("Auswahl aktiv") : QStringLiteral("Lesen"));
     }
@@ -1009,9 +1088,16 @@ void MainWindow::showPdfViewContextMenu(const QPointF &imagePoint, const QPoint 
         menu.addAction(m_replaceSelectedTextAction);
         menu.addAction(m_rectangleAnnotationAction);
         menu.addAction(m_redactSelectionAction);
+        if (m_documentController->isOcrAvailable()) {
+            menu.addAction(m_runOcrSelectionAction);
+        }
     }
     menu.addAction(m_addTextAction);
+    menu.addAction(m_insertSignatureAction);
     menu.addAction(m_noteAnnotationAction);
+    if (m_documentController->isOcrAvailable()) {
+        menu.addAction(m_runOcrCurrentPageAction);
+    }
 
     if (m_documentController->hasSelectedOverlay()) {
         menu.addSeparator();
@@ -1137,6 +1223,15 @@ void MainWindow::createActions()
     m_toggleDarkModeAction->setCheckable(true);
     connect(m_toggleDarkModeAction, &QAction::toggled, this, &MainWindow::setDarkMode);
 
+    m_insertSignatureAction = new QAction(QStringLiteral("Unterschrift einfügen..."), this);
+    connect(m_insertSignatureAction, &QAction::triggered, this, &MainWindow::insertSignature);
+
+    m_runOcrCurrentPageAction = new QAction(QStringLiteral("OCR aktuelle Seite"), this);
+    connect(m_runOcrCurrentPageAction, &QAction::triggered, this, &MainWindow::runOcrCurrentPage);
+
+    m_runOcrSelectionAction = new QAction(QStringLiteral("OCR Auswahl"), this);
+    connect(m_runOcrSelectionAction, &QAction::triggered, this, &MainWindow::runOcrSelection);
+
     m_findNextAction = new QAction(QStringLiteral("Nächster Treffer"), this);
     m_findNextAction->setShortcut(QKeySequence(Qt::Key_F3));
     connect(m_findNextAction, &QAction::triggered, m_documentController.get(), &PdfDocumentController::findNext);
@@ -1173,6 +1268,7 @@ void MainWindow::createMenus()
     editMenu->addAction(m_copyAction);
     editMenu->addAction(m_deleteOverlayAction);
     editMenu->addSeparator();
+    editMenu->addAction(m_insertSignatureAction);
     editMenu->addAction(m_highlightSelectionAction);
     editMenu->addAction(m_replaceSelectedTextAction);
     editMenu->addAction(m_addTextAction);
@@ -1182,6 +1278,9 @@ void MainWindow::createMenus()
     editMenu->addAction(m_editTextAction);
     editMenu->addAction(m_changeAnnotationColorAction);
     editMenu->addAction(m_redactSelectionAction);
+    editMenu->addSeparator();
+    editMenu->addAction(m_runOcrCurrentPageAction);
+    editMenu->addAction(m_runOcrSelectionAction);
     editMenu->addSeparator();
     editMenu->addAction(m_findAction);
     editMenu->addAction(m_findNextAction);
@@ -1220,6 +1319,7 @@ void MainWindow::createToolbar()
     m_mainToolBar->addAction(m_highlightSelectionAction);
     m_mainToolBar->addAction(m_replaceSelectedTextAction);
     m_mainToolBar->addAction(m_addTextAction);
+    m_mainToolBar->addAction(m_insertSignatureAction);
     m_mainToolBar->addAction(m_redactSelectionAction);
     m_mainToolBar->addAction(m_deleteOverlayAction);
     m_mainToolBar->addWidget(createToolbarSpacer(24));
@@ -1234,6 +1334,8 @@ void MainWindow::createToolbar()
     m_mainToolBar->addAction(m_findNextAction);
     m_mainToolBar->addAction(m_findPreviousAction);
     m_mainToolBar->addAction(m_clearSearchAction);
+    m_mainToolBar->addAction(m_runOcrCurrentPageAction);
+    m_mainToolBar->addAction(m_runOcrSelectionAction);
     m_mainToolBar->addWidget(createToolbarSpacer());
     m_mainToolBar->addAction(m_toggleDarkModeAction);
     m_mainToolBar->addWidget(createToolbarSpacer());

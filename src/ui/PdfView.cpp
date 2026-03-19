@@ -174,6 +174,30 @@ void PdfView::setAnnotationOverlays(const QVector<PdfAnnotationOverlay> &overlay
                 m_annotationItems.append(textItem);
             }
             break;
+        case PdfAnnotationKind::Signature:
+            for (const QRectF &rect : overlay.imageRects) {
+                auto *item = m_scene.addRect(
+                    rect,
+                    QPen(overlay.selected ? QColor(15, 108, 115) : QColor(110, 110, 110),
+                         overlay.selected ? 2.0 : 1.0,
+                         overlay.selected ? Qt::DashLine : Qt::SolidLine),
+                    Qt::NoBrush);
+                item->setZValue(6.2);
+                m_annotationItems.append(item);
+
+                QPixmap signaturePixmap;
+                signaturePixmap.loadFromData(overlay.binaryPayload);
+                if (!signaturePixmap.isNull()) {
+                    auto *pixmapItem = m_scene.addPixmap(signaturePixmap.scaled(
+                        rect.size().toSize(),
+                        Qt::KeepAspectRatio,
+                        Qt::SmoothTransformation));
+                    pixmapItem->setPos(rect.topLeft());
+                    pixmapItem->setZValue(6.1);
+                    m_annotationItems.append(pixmapItem);
+                }
+            }
+            break;
         }
     }
 }

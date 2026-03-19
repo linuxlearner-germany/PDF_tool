@@ -319,6 +319,12 @@
 			null
 		],
 		[
+			"/home/paul/Nextcloud/PDF_tool/src/services/OcrService.h",
+			"MU",
+			"GQ6NBGVJMG/moc_OcrService.cpp",
+			null
+		],
+		[
 			"/home/paul/Nextcloud/PDF_tool/src/ui/MainWindow.h",
 			"MU",
 			"YPKJ5OE7LN/moc_MainWindow.cpp",
@@ -442,6 +448,11 @@
 		],
 		[
 			"/home/paul/Nextcloud/PDF_tool/src/rendering/PopplerAdapter.cpp",
+			"MU",
+			null
+		],
+		[
+			"/home/paul/Nextcloud/PDF_tool/src/services/OcrService.cpp",
 			"MU",
 			null
 		],

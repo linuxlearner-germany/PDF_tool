@@ -40,6 +40,7 @@ set(PDF_TOOL_SOURCES
     src/document/PdfDocumentController.cpp
     src/document/PageThumbnailProvider.cpp
     src/document/RedactionModel.cpp
+    src/services/OcrService.cpp
     src/rendering/PopplerAdapter.cpp
     src/operations/QPdfOperations.cpp
 )
@@ -57,6 +58,7 @@ set(PDF_TOOL_HEADERS
     src/document/RedactionModel.h
     src/document/SearchModel.h
     src/document/SelectionModel.h
+    src/services/OcrService.h
     src/rendering/PdfRenderEngine.h
     src/rendering/PopplerAdapter.h
     src/operations/QPdfOperations.h

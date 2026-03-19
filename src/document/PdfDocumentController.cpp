@@ -2,6 +2,7 @@
 
 #include <algorithm>
 
+#include <QBuffer>
 #include <QClipboard>
 #include <QFile>
 #include <QGuiApplication>
@@ -18,6 +19,7 @@
 
 #include "document/PageThumbnailProvider.h"
 #include "rendering/PdfRenderEngine.h"
+#include "services/OcrService.h"
 
 namespace
 {
@@ -159,6 +161,11 @@ bool PdfDocumentController::hasAreaSelection() const
 QString PdfDocumentController::selectedText() const
 {
     return m_selectionModel.plainText();
+}
+
+bool PdfDocumentController::isOcrAvailable() const
+{
+    return OcrService::isAvailable();
 }
 
 bool PdfDocumentController::hasSearchResults() const
@@ -340,6 +347,21 @@ bool PdfDocumentController::exportEditedPdf(const QString &outputFile)
                                               annotation.text);
                     }
                     break;
+                case PdfAnnotationKind::Signature:
+                    for (const QRectF &pageRect : annotation.pageRects) {
+                        QImage signatureImage;
+                        signatureImage.loadFromData(annotation.binaryPayload);
+                        if (signatureImage.isNull()) {
+                            continue;
+                        }
+
+                        const QRectF imageRect(pageRect.left() * scaleX,
+                                               pageRect.top() * scaleY,
+                                               pageRect.width() * scaleX,
+                                               pageRect.height() * scaleY);
+                        imagePainter.drawImage(imageRect, signatureImage);
+                    }
+                    break;
                 }
             }
 
@@ -497,6 +519,12 @@ bool PdfDocumentController::hasSelectedTextEditAnnotation() const
 QString PdfDocumentController::selectedTextEditText() const
 {
     return hasSelectedTextEditAnnotation() ? m_annotationModel.selectedAnnotationText() : QString();
+}
+
+bool PdfDocumentController::hasSelectedSignatureAnnotation() const
+{
+    return m_annotationModel.hasSelectedAnnotation()
+        && m_annotationModel.selectedAnnotationKind() == PdfAnnotationKind::Signature;
 }
 
 QPixmap PdfDocumentController::thumbnailForPage(int pageIndex, const QSize &targetSize)
@@ -702,6 +730,56 @@ void PdfDocumentController::replaceSelectedText(const QString &text)
     emit statusMessageChanged(QStringLiteral("Text ersetzt."));
 }
 
+void PdfDocumentController::addSignatureFromImageAt(const QPointF &imagePoint, const QImage &signatureImage)
+{
+    if (!hasDocument() || signatureImage.isNull() || m_currentPageImage.isNull() || m_pageSizePoints.isEmpty()) {
+        return;
+    }
+
+    QByteArray pngBytes;
+    QBuffer buffer(&pngBytes);
+    buffer.open(QIODevice::WriteOnly);
+    signatureImage.save(&buffer, "PNG");
+
+    const QSize scaledSize = signatureImage.size().scaled(220, 96, Qt::KeepAspectRatio);
+    const QPointF pagePoint = imagePointToPagePoint(imagePoint);
+    const QRectF pageRect(
+        pagePoint.x(),
+        pagePoint.y(),
+        scaledSize.width() * m_pageSizePoints.width() / qMax(1, m_currentPageImage.width()),
+        scaledSize.height() * m_pageSizePoints.height() / qMax(1, m_currentPageImage.height()));
+
+    if (!m_annotationModel.addSignature(m_currentPageIndex, pageRect, pngBytes)) {
+        return;
+    }
+
+    saveSidecarState();
+    emitOverlayState();
+    updateOverlaySelectionSignal();
+    emit statusMessageChanged(QStringLiteral("Unterschrift eingefügt."));
+}
+
+void PdfDocumentController::addSignatureFromImageToSelection(const QImage &signatureImage)
+{
+    if (!hasDocument() || signatureImage.isNull() || !hasAreaSelection()) {
+        return;
+    }
+
+    QByteArray pngBytes;
+    QBuffer buffer(&pngBytes);
+    buffer.open(QIODevice::WriteOnly);
+    signatureImage.save(&buffer, "PNG");
+
+    if (!m_annotationModel.addSignature(m_currentPageIndex, m_lastSelectionPageRect, pngBytes)) {
+        return;
+    }
+
+    saveSidecarState();
+    emitOverlayState();
+    updateOverlaySelectionSignal();
+    emit statusMessageChanged(QStringLiteral("Unterschrift platziert."));
+}
+
 void PdfDocumentController::selectOverlayAt(const QPointF &imagePoint)
 {
     if (!hasDocument()) {
@@ -898,6 +976,56 @@ void PdfDocumentController::addRedactionFromSelection()
     emit statusMessageChanged(QStringLiteral("Schwärzung vorgemerkt."));
 }
 
+void PdfDocumentController::runOcrOnCurrentPage()
+{
+    if (!hasDocument()) {
+        return;
+    }
+
+    emit busyStateChanged(true, QStringLiteral("OCR für aktuelle Seite läuft..."));
+    QString errorMessage;
+    const QImage image = m_renderEngine->renderPage(m_currentPageIndex, 2.5);
+    const QString text = OcrService::recognizeImage(image, &errorMessage, QStringLiteral("deu+eng"), 3);
+    emit busyStateChanged(false, QString());
+
+    if (text.isEmpty()) {
+        m_lastError = errorMessage.isEmpty() ? QStringLiteral("OCR hat keinen Text erkannt.") : errorMessage;
+        emit errorOccurred(m_lastError);
+        return;
+    }
+
+    emit ocrFinished(QStringLiteral("OCR: Aktuelle Seite"), text);
+    emit statusMessageChanged(QStringLiteral("OCR für aktuelle Seite abgeschlossen."));
+}
+
+void PdfDocumentController::runOcrOnSelection()
+{
+    if (!hasDocument() || !hasAreaSelection() || m_currentPageImage.isNull()) {
+        return;
+    }
+
+    const QRectF imageRect = pageRectToImageRect(m_lastSelectionPageRect)
+        .intersected(QRectF(QPointF(0.0, 0.0), QSizeF(m_currentPageImage.size())));
+    if (imageRect.isEmpty()) {
+        return;
+    }
+
+    emit busyStateChanged(true, QStringLiteral("OCR für Auswahl läuft..."));
+    QString errorMessage;
+    const QImage croppedImage = m_currentPageImage.copy(imageRect.toAlignedRect());
+    const QString text = OcrService::recognizeImage(croppedImage, &errorMessage, QStringLiteral("deu+eng"), 6);
+    emit busyStateChanged(false, QString());
+
+    if (text.isEmpty()) {
+        m_lastError = errorMessage.isEmpty() ? QStringLiteral("OCR hat keinen Text erkannt.") : errorMessage;
+        emit errorOccurred(m_lastError);
+        return;
+    }
+
+    emit ocrFinished(QStringLiteral("OCR: Auswahl"), text);
+    emit statusMessageChanged(QStringLiteral("OCR für Auswahl abgeschlossen."));
+}
+
 QString PdfDocumentController::annotationSidecarPath() const
 {
     if (m_documentPath.isEmpty()) {
@@ -1071,6 +1199,7 @@ void PdfDocumentController::emitOverlayState()
         overlay.imageRects = pageRectsToImageRects(annotation.pageRects);
         overlay.color = annotation.color;
         overlay.text = annotation.text;
+        overlay.binaryPayload = annotation.binaryPayload;
         overlay.selected = annotation.selected;
         annotationOverlays.append(overlay);
     }

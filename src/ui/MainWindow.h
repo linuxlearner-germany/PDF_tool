@@ -13,6 +13,7 @@ class QLabel;
 class QLineEdit;
 class QListView;
 class QDockWidget;
+class QTextEdit;
 class QTabWidget;
 class QToolBar;
 class QTreeWidget;
@@ -41,6 +42,10 @@ private slots:
     void exportEditedPdf();
     void exportRedactedPdf();
     void printDocument();
+    void insertSignature();
+    void runOcrCurrentPage();
+    void runOcrSelection();
+    void showOcrResult(const QString &title, const QString &text);
     void requestNoteAnnotation();
     void editSelectedNoteAnnotation();
     void requestFreeTextAnnotation();
@@ -130,5 +135,8 @@ private:
     QAction *m_findPreviousAction {nullptr};
     QAction *m_clearSearchAction {nullptr};
     QAction *m_toggleDarkModeAction {nullptr};
+    QAction *m_insertSignatureAction {nullptr};
+    QAction *m_runOcrCurrentPageAction {nullptr};
+    QAction *m_runOcrSelectionAction {nullptr};
     ThemeMode m_themeMode {ThemeMode::Light};
 };
