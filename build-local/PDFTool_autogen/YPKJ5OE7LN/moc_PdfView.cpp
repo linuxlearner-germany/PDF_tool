@@ -58,6 +58,8 @@ static constexpr auto qt_meta_stringdata_ZN7PdfViewE = QtMocHelpers::stringData(
     "text",
     "formCheckToggled",
     "checked",
+    "setDarkMode",
+    "enabled",
     "setPageImage",
     "image",
     "setSelectionHighlights",
@@ -83,7 +85,7 @@ Q_CONSTINIT static const uint qt_meta_data_ZN7PdfViewE[] = {
       12,       // revision
        0,       // classname
        0,    0, // classinfo
-      18,   14, // methods
+      19,   14, // methods
        0,    0, // properties
        0,    0, // enums/sets
        0,    0, // constructors
@@ -91,26 +93,27 @@ Q_CONSTINIT static const uint qt_meta_data_ZN7PdfViewE[] = {
       12,       // signalCount
 
  // signals: name, argc, parameters, tag, flags, initial metatype offsets
-       1,    1,  122,    2, 0x06,    1 /* Public */,
-       4,    0,  125,    2, 0x06,    3 /* Public */,
-       5,    0,  126,    2, 0x06,    4 /* Public */,
-       6,    0,  127,    2, 0x06,    5 /* Public */,
-       7,    0,  128,    2, 0x06,    6 /* Public */,
-       8,    0,  129,    2, 0x06,    7 /* Public */,
-       9,    0,  130,    2, 0x06,    8 /* Public */,
-      10,    0,  131,    2, 0x06,    9 /* Public */,
-      11,    1,  132,    2, 0x06,   10 /* Public */,
-      13,    2,  135,    2, 0x06,   12 /* Public */,
-      15,    2,  140,    2, 0x06,   15 /* Public */,
-      18,    2,  145,    2, 0x06,   18 /* Public */,
+       1,    1,  128,    2, 0x06,    1 /* Public */,
+       4,    0,  131,    2, 0x06,    3 /* Public */,
+       5,    0,  132,    2, 0x06,    4 /* Public */,
+       6,    0,  133,    2, 0x06,    5 /* Public */,
+       7,    0,  134,    2, 0x06,    6 /* Public */,
+       8,    0,  135,    2, 0x06,    7 /* Public */,
+       9,    0,  136,    2, 0x06,    8 /* Public */,
+      10,    0,  137,    2, 0x06,    9 /* Public */,
+      11,    1,  138,    2, 0x06,   10 /* Public */,
+      13,    2,  141,    2, 0x06,   12 /* Public */,
+      15,    2,  146,    2, 0x06,   15 /* Public */,
+      18,    2,  151,    2, 0x06,   18 /* Public */,
 
  // slots: name, argc, parameters, tag, flags, initial metatype offsets
-      20,    1,  150,    2, 0x0a,   21 /* Public */,
-      22,    1,  153,    2, 0x0a,   23 /* Public */,
-      25,    2,  156,    2, 0x0a,   25 /* Public */,
-      27,    1,  161,    2, 0x0a,   28 /* Public */,
-      30,    1,  164,    2, 0x0a,   30 /* Public */,
-      32,    1,  167,    2, 0x0a,   32 /* Public */,
+      20,    1,  156,    2, 0x0a,   21 /* Public */,
+      22,    1,  159,    2, 0x0a,   23 /* Public */,
+      24,    1,  162,    2, 0x0a,   25 /* Public */,
+      27,    2,  165,    2, 0x0a,   27 /* Public */,
+      29,    1,  170,    2, 0x0a,   30 /* Public */,
+      32,    1,  173,    2, 0x0a,   32 /* Public */,
+      34,    1,  176,    2, 0x0a,   34 /* Public */,
 
  // signals: parameters
     QMetaType::Void, QMetaType::QRectF,    3,
@@ -127,12 +130,13 @@ Q_CONSTINIT static const uint qt_meta_data_ZN7PdfViewE[] = {
     QMetaType::Void, QMetaType::QString, QMetaType::Bool,   16,   19,
 
  // slots: parameters
-    QMetaType::Void, QMetaType::QImage,   21,
-    QMetaType::Void, 0x80000000 | 23,   24,
-    QMetaType::Void, 0x80000000 | 23, 0x80000000 | 23,   24,   26,
-    QMetaType::Void, 0x80000000 | 28,   29,
-    QMetaType::Void, 0x80000000 | 31,   29,
-    QMetaType::Void, 0x80000000 | 33,   29,
+    QMetaType::Void, QMetaType::Bool,   21,
+    QMetaType::Void, QMetaType::QImage,   23,
+    QMetaType::Void, 0x80000000 | 25,   26,
+    QMetaType::Void, 0x80000000 | 25, 0x80000000 | 25,   26,   28,
+    QMetaType::Void, 0x80000000 | 30,   31,
+    QMetaType::Void, 0x80000000 | 33,   31,
+    QMetaType::Void, 0x80000000 | 35,   31,
 
        0        // eod
 };
@@ -178,6 +182,9 @@ Q_CONSTINIT const QMetaObject PdfView::staticMetaObject = { {
         QtPrivate::TypeAndForceComplete<void, std::false_type>,
         QtPrivate::TypeAndForceComplete<const QString &, std::false_type>,
         QtPrivate::TypeAndForceComplete<bool, std::false_type>,
+        // method 'setDarkMode'
+        QtPrivate::TypeAndForceComplete<void, std::false_type>,
+        QtPrivate::TypeAndForceComplete<bool, std::false_type>,
         // method 'setPageImage'
         QtPrivate::TypeAndForceComplete<void, std::false_type>,
         QtPrivate::TypeAndForceComplete<const QImage &, std::false_type>,
@@ -218,26 +225,27 @@ void PdfView::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _id, voi
         case 9: _t->contextMenuRequested((*reinterpret_cast< std::add_pointer_t<QPointF>>(_a[1])),(*reinterpret_cast< std::add_pointer_t<QPoint>>(_a[2]))); break;
         case 10: _t->formTextEdited((*reinterpret_cast< std::add_pointer_t<QString>>(_a[1])),(*reinterpret_cast< std::add_pointer_t<QString>>(_a[2]))); break;
         case 11: _t->formCheckToggled((*reinterpret_cast< std::add_pointer_t<QString>>(_a[1])),(*reinterpret_cast< std::add_pointer_t<bool>>(_a[2]))); break;
-        case 12: _t->setPageImage((*reinterpret_cast< std::add_pointer_t<QImage>>(_a[1]))); break;
-        case 13: _t->setSelectionHighlights((*reinterpret_cast< std::add_pointer_t<QList<QRectF>>>(_a[1]))); break;
-        case 14: _t->setSearchHighlights((*reinterpret_cast< std::add_pointer_t<QList<QRectF>>>(_a[1])),(*reinterpret_cast< std::add_pointer_t<QList<QRectF>>>(_a[2]))); break;
-        case 15: _t->setAnnotationOverlays((*reinterpret_cast< std::add_pointer_t<QList<PdfAnnotationOverlay>>>(_a[1]))); break;
-        case 16: _t->setFormFieldOverlays((*reinterpret_cast< std::add_pointer_t<QList<PdfFormFieldOverlay>>>(_a[1]))); break;
-        case 17: _t->setRedactionOverlays((*reinterpret_cast< std::add_pointer_t<QList<PdfRedactionOverlay>>>(_a[1]))); break;
+        case 12: _t->setDarkMode((*reinterpret_cast< std::add_pointer_t<bool>>(_a[1]))); break;
+        case 13: _t->setPageImage((*reinterpret_cast< std::add_pointer_t<QImage>>(_a[1]))); break;
+        case 14: _t->setSelectionHighlights((*reinterpret_cast< std::add_pointer_t<QList<QRectF>>>(_a[1]))); break;
+        case 15: _t->setSearchHighlights((*reinterpret_cast< std::add_pointer_t<QList<QRectF>>>(_a[1])),(*reinterpret_cast< std::add_pointer_t<QList<QRectF>>>(_a[2]))); break;
+        case 16: _t->setAnnotationOverlays((*reinterpret_cast< std::add_pointer_t<QList<PdfAnnotationOverlay>>>(_a[1]))); break;
+        case 17: _t->setFormFieldOverlays((*reinterpret_cast< std::add_pointer_t<QList<PdfFormFieldOverlay>>>(_a[1]))); break;
+        case 18: _t->setRedactionOverlays((*reinterpret_cast< std::add_pointer_t<QList<PdfRedactionOverlay>>>(_a[1]))); break;
         default: ;
         }
     }
     if (_c == QMetaObject::RegisterMethodArgumentMetaType) {
         switch (_id) {
         default: *reinterpret_cast<QMetaType *>(_a[0]) = QMetaType(); break;
-        case 13:
+        case 14:
             switch (*reinterpret_cast<int*>(_a[1])) {
             default: *reinterpret_cast<QMetaType *>(_a[0]) = QMetaType(); break;
             case 0:
                 *reinterpret_cast<QMetaType *>(_a[0]) = QMetaType::fromType< QList<QRectF> >(); break;
             }
             break;
-        case 14:
+        case 15:
             switch (*reinterpret_cast<int*>(_a[1])) {
             default: *reinterpret_cast<QMetaType *>(_a[0]) = QMetaType(); break;
             case 1:
@@ -355,14 +363,14 @@ int PdfView::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
     if (_id < 0)
         return _id;
     if (_c == QMetaObject::InvokeMetaMethod) {
-        if (_id < 18)
+        if (_id < 19)
             qt_static_metacall(this, _c, _id, _a);
-        _id -= 18;
+        _id -= 19;
     }
     if (_c == QMetaObject::RegisterMethodArgumentMetaType) {
-        if (_id < 18)
+        if (_id < 19)
             qt_static_metacall(this, _c, _id, _a);
-        _id -= 18;
+        _id -= 19;
     }
     return _id;
 }

@@ -7,6 +7,7 @@
 #include <QGuiApplication>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QFont>
 #include <QPainter>
 #include <QPageLayout>
 #include <QPageSize>
@@ -232,6 +233,173 @@ bool PdfDocumentController::printDocument(QPrinter *printer)
     return true;
 }
 
+bool PdfDocumentController::exportEditedPdf(const QString &outputFile)
+{
+    if (!hasDocument() || outputFile.isEmpty()) {
+        return false;
+    }
+
+    emit busyStateChanged(true, QStringLiteral("Bearbeitetes PDF wird exportiert..."));
+
+    QPdfWriter writer(outputFile);
+    writer.setCreator(QStringLiteral("PDFTool"));
+    writer.setResolution(144);
+
+    QPainter painter(&writer);
+    if (!painter.isActive()) {
+        emit busyStateChanged(false, QString());
+        m_lastError = QStringLiteral("Ausgabe-PDF konnte nicht erstellt werden.");
+        emit errorOccurred(m_lastError);
+        return false;
+    }
+
+    for (int pageIndex = 0; pageIndex < pageCount(); ++pageIndex) {
+        const QSizeF pageSizePoints = m_renderEngine->pageSizePoints(pageIndex);
+        if (pageSizePoints.isValid() && !pageSizePoints.isEmpty()) {
+            writer.setPageSize(QPageSize(pageSizePoints, QPageSize::Point, QString(), QPageSize::ExactMatch));
+        }
+        if (pageIndex > 0) {
+            writer.newPage();
+        }
+
+        QImage pageImage = m_renderEngine->renderPage(pageIndex, kRedactionExportScale);
+        if (pageImage.isNull()) {
+            painter.end();
+            emit busyStateChanged(false, QString());
+            m_lastError = m_renderEngine->lastError();
+            emit errorOccurred(m_lastError);
+            return false;
+        }
+
+        if (pageSizePoints.isValid() && !pageSizePoints.isEmpty()) {
+            const double scaleX = static_cast<double>(pageImage.width()) / pageSizePoints.width();
+            const double scaleY = static_cast<double>(pageImage.height()) / pageSizePoints.height();
+
+            QPainter imagePainter(&pageImage);
+            imagePainter.setRenderHints(QPainter::Antialiasing | QPainter::TextAntialiasing | QPainter::SmoothPixmapTransform);
+
+            const QVector<PdfAnnotation> annotations = m_annotationModel.annotationsForPage(pageIndex);
+            for (const PdfAnnotation &annotation : annotations) {
+                switch (annotation.kind) {
+                case PdfAnnotationKind::Highlight:
+                    imagePainter.setPen(Qt::NoPen);
+                    for (const QRectF &pageRect : annotation.pageRects) {
+                        const QRectF imageRect(pageRect.left() * scaleX,
+                                               pageRect.top() * scaleY,
+                                               pageRect.width() * scaleX,
+                                               pageRect.height() * scaleY);
+                        imagePainter.fillRect(imageRect, annotation.color);
+                    }
+                    break;
+                case PdfAnnotationKind::Rectangle: {
+                    QPen pen(annotation.color, 2.0);
+                    imagePainter.setPen(pen);
+                    imagePainter.setBrush(Qt::NoBrush);
+                    for (const QRectF &pageRect : annotation.pageRects) {
+                        const QRectF imageRect(pageRect.left() * scaleX,
+                                               pageRect.top() * scaleY,
+                                               pageRect.width() * scaleX,
+                                               pageRect.height() * scaleY);
+                        imagePainter.drawRect(imageRect);
+                    }
+                    break;
+                }
+                case PdfAnnotationKind::Note:
+                    imagePainter.setPen(QPen(QColor(121, 85, 72), 1.0));
+                    imagePainter.setBrush(annotation.color);
+                    for (const QRectF &pageRect : annotation.pageRects) {
+                        const QRectF imageRect(pageRect.left() * scaleX,
+                                               pageRect.top() * scaleY,
+                                               pageRect.width() * scaleX,
+                                               pageRect.height() * scaleY);
+                        imagePainter.drawRect(imageRect);
+                        imagePainter.setPen(Qt::black);
+                        imagePainter.drawText(imageRect.adjusted(4.0, 2.0, -2.0, -2.0),
+                                              Qt::AlignLeft | Qt::AlignTop,
+                                              QStringLiteral("N"));
+                        imagePainter.setPen(QPen(QColor(121, 85, 72), 1.0));
+                    }
+                    break;
+                case PdfAnnotationKind::FreeText:
+                    for (const QRectF &pageRect : annotation.pageRects) {
+                        const QRectF imageRect(pageRect.left() * scaleX,
+                                               pageRect.top() * scaleY,
+                                               pageRect.width() * scaleX,
+                                               pageRect.height() * scaleY);
+                        imagePainter.fillRect(imageRect, annotation.color);
+                        imagePainter.setPen(QPen(QColor(210, 210, 210), 1.0));
+                        imagePainter.drawRect(imageRect);
+
+                        QFont font = imagePainter.font();
+                        const double pointSize = std::clamp(imageRect.height() * 0.18, 8.0, 20.0);
+                        font.setPointSizeF(pointSize);
+                        imagePainter.setFont(font);
+                        imagePainter.setPen(Qt::black);
+                        imagePainter.drawText(imageRect.adjusted(6.0, 4.0, -6.0, -4.0),
+                                              Qt::AlignLeft | Qt::AlignTop | Qt::TextWordWrap,
+                                              annotation.text);
+                    }
+                    break;
+                }
+            }
+
+            const QVector<PdfFormField> fields = m_formFieldModel.fieldsForPage(pageIndex);
+            for (const PdfFormField &field : fields) {
+                const QRectF imageRect(field.pageRect.left() * scaleX,
+                                       field.pageRect.top() * scaleY,
+                                       field.pageRect.width() * scaleX,
+                                       field.pageRect.height() * scaleY);
+
+                imagePainter.setPen(QPen(QColor(25, 118, 210), 1.0));
+                imagePainter.setBrush(QColor(255, 255, 255, 230));
+                imagePainter.drawRect(imageRect);
+
+                if (field.kind == PdfFormFieldKind::Text) {
+                    QFont font = imagePainter.font();
+                    const double pointSize = std::clamp(imageRect.height() * 0.16, 8.0, 18.0);
+                    font.setPointSizeF(pointSize);
+                    imagePainter.setFont(font);
+                    imagePainter.setPen(Qt::black);
+                    imagePainter.drawText(imageRect.adjusted(4.0, 2.0, -4.0, -2.0),
+                                          Qt::AlignLeft | Qt::AlignVCenter | Qt::TextWordWrap,
+                                          field.textValue);
+                } else if (field.kind == PdfFormFieldKind::CheckBox) {
+                    const QRectF boxRect = imageRect.adjusted(3.0, 3.0, -3.0, -3.0);
+                    imagePainter.setBrush(Qt::white);
+                    imagePainter.setPen(QPen(Qt::black, 1.0));
+                    imagePainter.drawRect(boxRect);
+
+                    if (field.checked) {
+                        imagePainter.setPen(QPen(Qt::black, 2.0));
+                        imagePainter.drawLine(boxRect.topLeft() + QPointF(3.0, boxRect.height() * 0.55),
+                                              boxRect.center() + QPointF(-1.0, boxRect.height() * 0.2));
+                        imagePainter.drawLine(boxRect.center() + QPointF(-1.0, boxRect.height() * 0.2),
+                                              boxRect.bottomRight() + QPointF(-3.0, -3.0));
+                    }
+                }
+            }
+
+            const QVector<PdfRedaction> redactions = m_redactionModel.redactionsForPage(pageIndex);
+            imagePainter.setPen(Qt::NoPen);
+            imagePainter.setBrush(Qt::black);
+            for (const PdfRedaction &redaction : redactions) {
+                const QRectF imageRect(redaction.pageRect.left() * scaleX,
+                                       redaction.pageRect.top() * scaleY,
+                                       redaction.pageRect.width() * scaleX,
+                                       redaction.pageRect.height() * scaleY);
+                imagePainter.drawRect(imageRect);
+            }
+        }
+
+        painter.drawImage(QRectF(0.0, 0.0, writer.width(), writer.height()), pageImage);
+    }
+
+    painter.end();
+    emit busyStateChanged(false, QString());
+    emit statusMessageChanged(QStringLiteral("Bearbeitetes PDF exportiert."));
+    return true;
+}
+
 bool PdfDocumentController::exportRedactedPdf(const QString &outputFile)
 {
     if (!hasDocument() || outputFile.isEmpty() || !m_redactionModel.hasRedactions()) {
@@ -302,6 +470,11 @@ bool PdfDocumentController::hasSelectedOverlay() const
 bool PdfDocumentController::hasRedactions() const
 {
     return m_redactionModel.hasRedactions();
+}
+
+bool PdfDocumentController::hasTextEditAnnotations() const
+{
+    return m_annotationModel.hasAnnotationKind(PdfAnnotationKind::FreeText);
 }
 
 bool PdfDocumentController::hasSelectedNoteAnnotation() const
@@ -417,15 +590,15 @@ void PdfDocumentController::updateTextSelection(const QRectF &imageSelectionRect
     }
 
     const PdfTextSelection selection = m_renderEngine->buildTextSelection(m_currentPageIndex, m_lastSelectionPageRect);
+    emit selectionHighlightChanged({ normalizedImageRect });
+
     if (selection.isEmpty() || selection.toPlainText().isEmpty()) {
         m_selectionModel.clear();
-        emit selectionHighlightChanged({});
         emit textSelectionChanged(false);
         return;
     }
 
     m_selectionModel.setSelection(m_currentPageIndex, selection);
-    emit selectionHighlightChanged(pageRectsToImageRects(m_selectionModel.pageRects()));
     emit textSelectionChanged(true);
 }
 
@@ -882,8 +1055,8 @@ QRectF PdfDocumentController::pageRectToImageRect(const QRectF &pageRect) const
 void PdfDocumentController::emitOverlayState()
 {
     QVector<QRectF> selectionRects;
-    if (!m_selectionModel.isEmpty() && m_selectionModel.pageIndex() == m_currentPageIndex) {
-        selectionRects = pageRectsToImageRects(m_selectionModel.pageRects());
+    if (!m_lastSelectionPageRect.isEmpty()) {
+        selectionRects.append(pageRectToImageRect(m_lastSelectionPageRect));
     }
     emit selectionHighlightChanged(selectionRects);
 

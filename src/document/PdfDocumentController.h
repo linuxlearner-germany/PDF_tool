@@ -57,9 +57,11 @@ public:
     QByteArray currentUserPassword() const;
     QByteArray currentOwnerPassword() const;
     bool printDocument(QPrinter *printer);
+    bool exportEditedPdf(const QString &outputFile);
     bool exportRedactedPdf(const QString &outputFile);
     bool hasSelectedOverlay() const;
     bool hasRedactions() const;
+    bool hasTextEditAnnotations() const;
     bool hasSelectedNoteAnnotation() const;
     QString selectedNoteText() const;
     bool hasSelectedTextEditAnnotation() const;

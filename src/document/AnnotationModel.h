@@ -25,6 +25,7 @@ public:
     bool selectAt(int pageIndex, const QPointF &pagePoint);
     QString selectedAnnotationId() const;
     bool hasSelectedAnnotation() const;
+    bool hasAnnotationKind(PdfAnnotationKind kind) const;
     PdfAnnotationKind selectedAnnotationKind() const;
     QString selectedAnnotationText() const;
 

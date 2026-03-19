@@ -19,19 +19,47 @@
 PdfView::PdfView(QWidget *parent)
     : QGraphicsView(parent)
     , m_pixmapItem(m_scene.addPixmap(QPixmap()))
-    , m_selectionRectItem(m_scene.addRect(QRectF(), QPen(QColor(0, 120, 215), 1.5), QBrush(QColor(0, 120, 215, 50))))
+    , m_selectionRectItem(m_scene.addRect(QRectF(), QPen(QColor(15, 108, 115), 1.6, Qt::DashLine), QBrush(QColor(15, 108, 115, 45))))
 {
     setScene(&m_scene);
     setAlignment(Qt::AlignCenter);
     setRenderHints(QPainter::Antialiasing | QPainter::SmoothPixmapTransform);
-    setBackgroundBrush(QColor(36, 36, 36));
+    setBackgroundBrush(QColor(228, 223, 213));
     setFrameShape(QFrame::NoFrame);
     setDragMode(QGraphicsView::ScrollHandDrag);
     setTransformationAnchor(QGraphicsView::AnchorUnderMouse);
     setFocusPolicy(Qt::StrongFocus);
+    setViewportUpdateMode(QGraphicsView::BoundingRectViewportUpdate);
+    setStyleSheet(QStringLiteral(
+        "QGraphicsView {"
+        "  border: none;"
+        "  background: qlineargradient(x1:0, y1:0, x2:1, y2:1,"
+        "                              stop:0 #ece5d8, stop:1 #d8d1c2);"
+        "}"));
 
     m_selectionRectItem->setVisible(false);
     m_selectionRectItem->setZValue(8.0);
+}
+
+void PdfView::setDarkMode(bool enabled)
+{
+    if (enabled) {
+        setBackgroundBrush(QColor(28, 33, 39));
+        setStyleSheet(QStringLiteral(
+            "QGraphicsView {"
+            "  border: none;"
+            "  background: qlineargradient(x1:0, y1:0, x2:1, y2:1,"
+            "                              stop:0 #1d2329, stop:1 #11161b);"
+            "}"));
+    } else {
+        setBackgroundBrush(QColor(228, 223, 213));
+        setStyleSheet(QStringLiteral(
+            "QGraphicsView {"
+            "  border: none;"
+            "  background: qlineargradient(x1:0, y1:0, x2:1, y2:1,"
+            "                              stop:0 #ece5d8, stop:1 #d8d1c2);"
+            "}"));
+    }
 }
 
 void PdfView::setPageImage(const QImage &image)
@@ -41,6 +69,7 @@ void PdfView::setPageImage(const QImage &image)
     constexpr qreal kHorizontalGap = 24.0;
     constexpr qreal kVerticalGap = 72.0;
     m_scene.setSceneRect(pageRect.adjusted(-kHorizontalGap, -kVerticalGap, kHorizontalGap, kVerticalGap));
+    m_pixmapItem->setShapeMode(QGraphicsPixmapItem::BoundingRectShape);
 
     switch (m_pendingScrollTarget) {
     case PendingScrollTarget::Bottom:
@@ -69,7 +98,7 @@ void PdfView::setSelectionHighlights(const QVector<QRectF> &imageRects)
     clearRectItems(m_selectionHighlightItems);
 
     for (const QRectF &imageRect : imageRects) {
-        auto *item = m_scene.addRect(imageRect, QPen(Qt::NoPen), QBrush(QColor(255, 235, 59, 120)));
+        auto *item = m_scene.addRect(imageRect, QPen(QColor(226, 165, 34, 110), 1.0), QBrush(QColor(255, 222, 89, 95)));
         item->setZValue(5.0);
         m_selectionHighlightItems.append(item);
     }
@@ -81,13 +110,13 @@ void PdfView::setSearchHighlights(const QVector<QRectF> &imageRects, const QVect
     clearRectItems(m_currentSearchHighlightItems);
 
     for (const QRectF &imageRect : imageRects) {
-        auto *item = m_scene.addRect(imageRect, QPen(QColor(255, 152, 0), 1.0), QBrush(QColor(255, 193, 7, 70)));
+        auto *item = m_scene.addRect(imageRect, QPen(QColor(181, 115, 20), 1.0), QBrush(QColor(224, 173, 67, 65)));
         item->setZValue(3.0);
         m_searchHighlightItems.append(item);
     }
 
     for (const QRectF &imageRect : currentImageRects) {
-        auto *item = m_scene.addRect(imageRect, QPen(QColor(216, 67, 21), 1.5), QBrush(QColor(255, 87, 34, 120)));
+        auto *item = m_scene.addRect(imageRect, QPen(QColor(168, 64, 34), 1.5), QBrush(QColor(212, 112, 58, 110)));
         item->setZValue(4.0);
         m_currentSearchHighlightItems.append(item);
     }

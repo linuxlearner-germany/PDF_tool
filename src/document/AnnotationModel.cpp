@@ -182,6 +182,17 @@ bool AnnotationModel::hasSelectedAnnotation() const
     return !selectedAnnotationId().isEmpty();
 }
 
+bool AnnotationModel::hasAnnotationKind(PdfAnnotationKind kind) const
+{
+    for (const PdfAnnotation &annotation : m_annotations) {
+        if (annotation.kind == kind) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 PdfAnnotationKind AnnotationModel::selectedAnnotationKind() const
 {
     for (const PdfAnnotation &annotation : m_annotations) {

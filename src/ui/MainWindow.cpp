@@ -19,13 +19,16 @@
 #include <QMenuBar>
 #include <QMessageBox>
 #include <QModelIndex>
+#include <QSettings>
 #include <QSignalBlocker>
 #include <QStatusBar>
+#include <QStyle>
 #include <QTabWidget>
 #include <QToolBar>
 #include <QTreeWidget>
 #include <QTreeWidgetItem>
 #include <QVBoxLayout>
+#include <QWidget>
 
 #include <QtPrintSupport/QPrintDialog>
 #include <QtPrintSupport/QPrinter>
@@ -108,6 +111,8 @@ MainWindow::MainWindow(QWidget *parent)
     createToolbar();
     createCentralLayout();
     createStatusBar();
+    m_themeMode = loadThemeSetting();
+    applyTheme(m_themeMode);
 
     setMinimumSize(1280, 860);
 
@@ -403,6 +408,29 @@ void MainWindow::exportRedactedPdf()
     }
 }
 
+void MainWindow::exportEditedPdf()
+{
+    if (!m_documentController->hasDocument()) {
+        return;
+    }
+
+    const QFileInfo inputInfo(m_documentController->documentPath());
+    const QString outputFile = QFileDialog::getSaveFileName(
+        this,
+        QStringLiteral("Bearbeitetes PDF exportieren"),
+        inputInfo.absolutePath() + QLatin1Char('/') + inputInfo.completeBaseName() + QStringLiteral("_edited.pdf"),
+        QStringLiteral("PDF Dateien (*.pdf)")
+    );
+
+    if (outputFile.isEmpty()) {
+        return;
+    }
+
+    if (!m_documentController->exportEditedPdf(outputFile)) {
+        showError(m_documentController->lastError());
+    }
+}
+
 void MainWindow::printDocument()
 {
     if (!m_documentController->hasDocument()) {
@@ -530,6 +558,12 @@ void MainWindow::updateWindowTitle()
         ? QStringLiteral("PDF Tool - %1").arg(m_documentController->documentPath())
         : QStringLiteral("PDF Tool");
     setWindowTitle(title);
+    if (m_documentStatusLabel) {
+        m_documentStatusLabel->setText(
+            m_documentController->hasDocument()
+                ? QFileInfo(m_documentController->documentPath()).fileName()
+                : QStringLiteral("Kein Dokument"));
+    }
 }
 
 void MainWindow::updateZoomLabel(double factor)
@@ -541,6 +575,9 @@ void MainWindow::updateCurrentPage(int pageIndex, int pageCount, const QString &
 {
     if (pageCount <= 0) {
         m_pageStatusLabel->setText(QStringLiteral("Seite: -/-"));
+        if (m_modeStatusLabel) {
+            m_modeStatusLabel->setText(QStringLiteral("Bereit"));
+        }
         return;
     }
 
@@ -548,6 +585,9 @@ void MainWindow::updateCurrentPage(int pageIndex, int pageCount, const QString &
         .arg(pageIndex + 1)
         .arg(pageCount)
         .arg(pageLabel));
+    if (m_modeStatusLabel) {
+        m_modeStatusLabel->setText(QStringLiteral("Lesen"));
+    }
 
     syncThumbnailSelection(pageIndex);
 }
@@ -557,6 +597,7 @@ void MainWindow::updateUiState(bool hasDocument)
     m_mergePdfsAction->setEnabled(m_pdfOperations->isAvailable());
     m_splitPdfAction->setEnabled(hasDocument && m_pdfOperations->isAvailable());
     m_exportEncryptedPdfAction->setEnabled(hasDocument && m_pdfOperations->isAvailable());
+    m_exportEditedPdfAction->setEnabled(hasDocument);
     m_exportRedactedPdfAction->setEnabled(hasDocument && m_documentController->hasRedactions());
     m_printAction->setEnabled(hasDocument);
     m_showMetadataAction->setEnabled(hasDocument);
@@ -575,6 +616,12 @@ void MainWindow::updateUiState(bool hasDocument)
     m_replaceSelectedTextAction->setEnabled(hasDocument && m_documentController->hasAreaSelection());
 
     if (!hasDocument) {
+        if (m_documentStatusLabel) {
+            m_documentStatusLabel->setText(QStringLiteral("Kein Dokument"));
+        }
+        if (m_modeStatusLabel) {
+            m_modeStatusLabel->setText(QStringLiteral("Bereit"));
+        }
         m_copyAction->setEnabled(false);
         m_highlightSelectionAction->setEnabled(false);
         m_deleteOverlayAction->setEnabled(false);
@@ -594,6 +641,9 @@ void MainWindow::updateSelectionDependentActions(bool hasSelection)
     m_copyAction->setEnabled(hasSelection);
     m_highlightSelectionAction->setEnabled(hasSelection);
     m_replaceSelectedTextAction->setEnabled(hasSelection || m_documentController->hasAreaSelection());
+    if (m_modeStatusLabel) {
+        m_modeStatusLabel->setText(hasSelection ? QStringLiteral("Auswahl aktiv") : QStringLiteral("Lesen"));
+    }
 }
 
 void MainWindow::updateOverlaySelectionActions(bool hasSelection)
@@ -602,7 +652,11 @@ void MainWindow::updateOverlaySelectionActions(bool hasSelection)
     m_changeAnnotationColorAction->setEnabled(hasSelection);
     m_editNoteAnnotationAction->setEnabled(hasSelection && m_documentController->hasSelectedNoteAnnotation());
     m_editTextAction->setEnabled(hasSelection && m_documentController->hasSelectedTextEditAnnotation());
+    m_exportEditedPdfAction->setEnabled(m_documentController->hasDocument());
     m_exportRedactedPdfAction->setEnabled(m_documentController->hasDocument() && m_documentController->hasRedactions());
+    if (m_modeStatusLabel && hasSelection) {
+        m_modeStatusLabel->setText(QStringLiteral("Objekt ausgewählt"));
+    }
 }
 
 void MainWindow::updateSearchState(bool hasResults, int currentHit, int totalHits, const QString &statusText)
@@ -614,6 +668,297 @@ void MainWindow::updateSearchState(bool hasResults, int currentHit, int totalHit
     m_findNextAction->setEnabled(hasResults);
     m_findPreviousAction->setEnabled(hasResults);
     m_clearSearchAction->setEnabled(m_documentController->hasDocument());
+}
+
+void MainWindow::setDarkMode(bool enabled)
+{
+    const ThemeMode newMode = enabled ? ThemeMode::Dark : ThemeMode::Light;
+    if (m_themeMode == newMode) {
+        return;
+    }
+
+    m_themeMode = newMode;
+    applyTheme(m_themeMode);
+    saveThemeSetting(m_themeMode);
+}
+
+void MainWindow::applyWindowStyle()
+{
+    applyTheme(m_themeMode);
+}
+
+void MainWindow::applyTheme(ThemeMode mode)
+{
+    setDockOptions(QMainWindow::AllowTabbedDocks | QMainWindow::AnimatedDocks);
+
+    if (mode == ThemeMode::Dark) {
+        setStyleSheet(QStringLiteral(
+            "QMainWindow, QMenuBar, QMenu, QStatusBar {"
+            "  background: #12171c;"
+            "  color: #e3e8eb;"
+            "}"
+            "QMenuBar {"
+            "  border-bottom: 1px solid #28323a;"
+            "  padding: 4px 8px;"
+            "}"
+            "QMenuBar::item {"
+            "  padding: 6px 10px;"
+            "  border-radius: 6px;"
+            "}"
+            "QMenuBar::item:selected, QMenu::item:selected {"
+            "  background: #24313a;"
+            "}"
+            "QMenu {"
+            "  border: 1px solid #2d3942;"
+            "  padding: 6px;"
+            "}"
+            "QToolBar {"
+            "  background: #171d23;"
+            "  border: 0;"
+            "  border-bottom: 1px solid #29343d;"
+            "  spacing: 6px;"
+            "  padding: 8px 12px;"
+            "}"
+            "QToolButton {"
+            "  color: #e3e8eb;"
+            "  background: transparent;"
+            "  border: 1px solid transparent;"
+            "  border-radius: 8px;"
+            "  padding: 7px 10px;"
+            "  margin: 0 1px;"
+            "}"
+            "QToolButton:hover {"
+            "  background: #22303a;"
+            "  border-color: #314552;"
+            "}"
+            "QToolButton:pressed, QToolButton:checked {"
+            "  background: #2b4351;"
+            "  border-color: #4b7183;"
+            "}"
+            "QDockWidget {"
+            "  font-weight: 600;"
+            "  color: #dfe6ea;"
+            "}"
+            "QDockWidget::title {"
+            "  text-align: left;"
+            "  background: #1b232b;"
+            "  padding: 10px 12px;"
+            "  border-bottom: 1px solid #2c3841;"
+            "}"
+            "QTabWidget::pane {"
+            "  border: 1px solid #2c3841;"
+            "  background: #171d23;"
+            "  border-radius: 10px;"
+            "}"
+            "QTabBar::tab {"
+            "  background: #202932;"
+            "  border: 1px solid #32404a;"
+            "  border-bottom: none;"
+            "  padding: 8px 14px;"
+            "  margin-right: 4px;"
+            "  border-top-left-radius: 8px;"
+            "  border-top-right-radius: 8px;"
+            "}"
+            "QTabBar::tab:selected {"
+            "  background: #171d23;"
+            "}"
+            "QListView, QTreeWidget {"
+            "  background: #171d23;"
+            "  color: #dfe6ea;"
+            "  border: none;"
+            "  outline: none;"
+            "  padding: 8px;"
+            "}"
+            "QListView::item, QTreeWidget::item {"
+            "  border-radius: 10px;"
+            "}"
+            "QListView::item:selected, QTreeWidget::item:selected {"
+            "  background: #29414d;"
+            "  color: #f1f5f7;"
+            "}"
+            "QListView::item:hover, QTreeWidget::item:hover {"
+            "  background: #1f2a32;"
+            "}"
+            "QLineEdit {"
+            "  color: #eef3f6;"
+            "  background: #0f1418;"
+            "  border: 1px solid #34434d;"
+            "  border-radius: 9px;"
+            "  padding: 8px 12px;"
+            "  selection-background-color: #0f6c73;"
+            "}"
+            "QStatusBar {"
+            "  border-top: 1px solid #28323a;"
+            "}"
+            "QStatusBar::item {"
+            "  border: none;"
+            "}"
+            "QLabel#statusPill {"
+            "  background: #1c252c;"
+            "  color: #dce3e7;"
+            "  border: 1px solid #34424a;"
+            "  border-radius: 10px;"
+            "  padding: 6px 10px;"
+            "}"
+            "QLabel#statusPillAccent {"
+            "  background: #143139;"
+            "  color: #9ed8dd;"
+            "  border: 1px solid #22525b;"
+            "  border-radius: 10px;"
+            "  padding: 6px 10px;"
+            "}"));
+    } else {
+        setStyleSheet(QStringLiteral(
+            "QMainWindow, QMenuBar, QMenu, QStatusBar {"
+            "  background: #f5f1e8;"
+            "  color: #1e2b2f;"
+            "}"
+            "QMenuBar {"
+            "  border-bottom: 1px solid #d8d0c0;"
+            "  padding: 4px 8px;"
+            "}"
+            "QMenuBar::item {"
+            "  padding: 6px 10px;"
+            "  border-radius: 6px;"
+            "}"
+            "QMenuBar::item:selected, QMenu::item:selected {"
+            "  background: #dfe9e4;"
+            "}"
+            "QMenu {"
+            "  border: 1px solid #d8d0c0;"
+            "  padding: 6px;"
+            "}"
+            "QToolBar {"
+            "  background: #fbf8f2;"
+            "  border: 0;"
+            "  border-bottom: 1px solid #d8d0c0;"
+            "  spacing: 6px;"
+            "  padding: 8px 12px;"
+            "}"
+            "QToolButton {"
+            "  background: transparent;"
+            "  border: 1px solid transparent;"
+            "  border-radius: 8px;"
+            "  padding: 7px 10px;"
+            "  margin: 0 1px;"
+            "}"
+            "QToolButton:hover {"
+            "  background: #e8efe9;"
+            "  border-color: #c2d0c9;"
+            "}"
+            "QToolButton:pressed, QToolButton:checked {"
+            "  background: #d4e4db;"
+            "  border-color: #8ca99b;"
+            "}"
+            "QDockWidget {"
+            "  font-weight: 600;"
+            "  color: #24353a;"
+            "}"
+            "QDockWidget::title {"
+            "  text-align: left;"
+            "  background: #e9e1d3;"
+            "  padding: 10px 12px;"
+            "  border-bottom: 1px solid #d8d0c0;"
+            "}"
+            "QTabWidget::pane {"
+            "  border: 1px solid #d8d0c0;"
+            "  background: #fbf8f2;"
+            "  border-radius: 10px;"
+            "}"
+            "QTabBar::tab {"
+            "  background: #ede6d8;"
+            "  border: 1px solid #d8d0c0;"
+            "  border-bottom: none;"
+            "  padding: 8px 14px;"
+            "  margin-right: 4px;"
+            "  border-top-left-radius: 8px;"
+            "  border-top-right-radius: 8px;"
+            "}"
+            "QTabBar::tab:selected {"
+            "  background: #fbf8f2;"
+            "}"
+            "QListView, QTreeWidget {"
+            "  background: #fbf8f2;"
+            "  border: none;"
+            "  outline: none;"
+            "  padding: 8px;"
+            "}"
+            "QListView::item, QTreeWidget::item {"
+            "  border-radius: 10px;"
+            "}"
+            "QListView::item:selected, QTreeWidget::item:selected {"
+            "  background: #d9e7e0;"
+            "  color: #1f2b2f;"
+            "}"
+            "QListView::item:hover, QTreeWidget::item:hover {"
+            "  background: #edf3ef;"
+            "}"
+            "QLineEdit {"
+            "  background: white;"
+            "  border: 1px solid #cbbfae;"
+            "  border-radius: 9px;"
+            "  padding: 8px 12px;"
+            "  selection-background-color: #0f6c73;"
+            "}"
+            "QStatusBar {"
+            "  border-top: 1px solid #d8d0c0;"
+            "}"
+            "QStatusBar::item {"
+            "  border: none;"
+            "}"
+            "QLabel#statusPill {"
+            "  background: #ece5d8;"
+            "  color: #24353a;"
+            "  border: 1px solid #d0c5b5;"
+            "  border-radius: 10px;"
+            "  padding: 6px 10px;"
+            "}"
+            "QLabel#statusPillAccent {"
+            "  background: #dce9e3;"
+            "  color: #0f4b52;"
+            "  border: 1px solid #b8cfc4;"
+            "  border-radius: 10px;"
+            "  padding: 6px 10px;"
+            "}"));
+    }
+
+    if (m_pdfView) {
+        m_pdfView->setDarkMode(mode == ThemeMode::Dark);
+    }
+    if (m_toggleDarkModeAction) {
+        const QSignalBlocker blocker(m_toggleDarkModeAction);
+        m_toggleDarkModeAction->setChecked(mode == ThemeMode::Dark);
+    }
+}
+
+MainWindow::ThemeMode MainWindow::loadThemeSetting() const
+{
+    const QSettings settings(QStringLiteral("PDFTool"), QStringLiteral("PDFTool"));
+    return settings.value(QStringLiteral("ui/theme"), QStringLiteral("light")).toString() == QStringLiteral("dark")
+        ? ThemeMode::Dark
+        : ThemeMode::Light;
+}
+
+void MainWindow::saveThemeSetting(ThemeMode mode) const
+{
+    QSettings settings(QStringLiteral("PDFTool"), QStringLiteral("PDFTool"));
+    settings.setValue(QStringLiteral("ui/theme"), mode == ThemeMode::Dark ? QStringLiteral("dark") : QStringLiteral("light"));
+}
+
+QWidget *MainWindow::createToolbarSpacer(int width) const
+{
+    auto *spacer = new QWidget();
+    spacer->setFixedWidth(width);
+    return spacer;
+}
+
+QLabel *MainWindow::createStatusPill(const QString &text, const QString &objectName) const
+{
+    auto *label = new QLabel(text);
+    label->setObjectName(objectName);
+    label->setMinimumHeight(30);
+    label->setAlignment(Qt::AlignCenter);
+    return label;
 }
 
 void MainWindow::navigateToSidebarPage(const QModelIndex &index)
@@ -689,10 +1034,12 @@ void MainWindow::createActions()
 {
     m_openAction = new QAction(QStringLiteral("Öffnen..."), this);
     m_openAction->setShortcut(QKeySequence::Open);
+    m_openAction->setIcon(style()->standardIcon(QStyle::SP_DialogOpenButton));
     connect(m_openAction, &QAction::triggered, this, &MainWindow::openPdf);
 
     m_printAction = new QAction(QStringLiteral("Drucken..."), this);
     m_printAction->setShortcut(QKeySequence::Print);
+    m_printAction->setIcon(style()->standardIcon(QStyle::SP_FileDialogDetailedView));
     connect(m_printAction, &QAction::triggered, this, &MainWindow::printDocument);
 
     m_mergePdfsAction = new QAction(QStringLiteral("PDFs zusammenführen..."), this);
@@ -704,10 +1051,14 @@ void MainWindow::createActions()
     m_exportEncryptedPdfAction = new QAction(QStringLiteral("Als verschlüsseltes PDF exportieren..."), this);
     connect(m_exportEncryptedPdfAction, &QAction::triggered, this, &MainWindow::exportEncryptedPdf);
 
+    m_exportEditedPdfAction = new QAction(QStringLiteral("Bearbeitetes PDF exportieren..."), this);
+    connect(m_exportEditedPdfAction, &QAction::triggered, this, &MainWindow::exportEditedPdf);
+
     m_exportRedactedPdfAction = new QAction(QStringLiteral("Geschwärztes PDF exportieren..."), this);
     connect(m_exportRedactedPdfAction, &QAction::triggered, this, &MainWindow::exportRedactedPdf);
 
     m_showMetadataAction = new QAction(QStringLiteral("Metadaten"), this);
+    m_showMetadataAction->setIcon(style()->standardIcon(QStyle::SP_FileDialogInfoView));
     connect(m_showMetadataAction, &QAction::triggered, this, &MainWindow::showMetadataDialog);
 
     m_exitAction = new QAction(QStringLiteral("Beenden"), this);
@@ -716,29 +1067,36 @@ void MainWindow::createActions()
 
     m_zoomInAction = new QAction(QStringLiteral("Zoom +"), this);
     m_zoomInAction->setShortcut(QKeySequence::ZoomIn);
+    m_zoomInAction->setIcon(style()->standardIcon(QStyle::SP_ArrowUp));
     connect(m_zoomInAction, &QAction::triggered, m_documentController.get(), &PdfDocumentController::zoomIn);
 
     m_zoomOutAction = new QAction(QStringLiteral("Zoom -"), this);
     m_zoomOutAction->setShortcut(QKeySequence::ZoomOut);
+    m_zoomOutAction->setIcon(style()->standardIcon(QStyle::SP_ArrowDown));
     connect(m_zoomOutAction, &QAction::triggered, m_documentController.get(), &PdfDocumentController::zoomOut);
 
     m_resetZoomAction = new QAction(QStringLiteral("100%"), this);
+    m_resetZoomAction->setIcon(style()->standardIcon(QStyle::SP_BrowserReload));
     connect(m_resetZoomAction, &QAction::triggered, m_documentController.get(), &PdfDocumentController::resetZoom);
 
     m_previousPageAction = new QAction(QStringLiteral("Vorherige Seite"), this);
     m_previousPageAction->setShortcut(QKeySequence(Qt::Key_PageUp));
+    m_previousPageAction->setIcon(style()->standardIcon(QStyle::SP_ArrowBack));
     connect(m_previousPageAction, &QAction::triggered, m_documentController.get(), &PdfDocumentController::previousPage);
 
     m_nextPageAction = new QAction(QStringLiteral("Nächste Seite"), this);
     m_nextPageAction->setShortcut(QKeySequence(Qt::Key_PageDown));
+    m_nextPageAction->setIcon(style()->standardIcon(QStyle::SP_ArrowForward));
     connect(m_nextPageAction, &QAction::triggered, m_documentController.get(), &PdfDocumentController::nextPage);
 
     m_copyAction = new QAction(QStringLiteral("Kopieren"), this);
     m_copyAction->setShortcut(QKeySequence::Copy);
+    m_copyAction->setIcon(style()->standardIcon(QStyle::SP_FileDialogNewFolder));
     connect(m_copyAction, &QAction::triggered, m_documentController.get(), &PdfDocumentController::copySelectedText);
 
     m_deleteOverlayAction = new QAction(QStringLiteral("Löschen"), this);
     m_deleteOverlayAction->setShortcut(QKeySequence(Qt::Key_Delete));
+    m_deleteOverlayAction->setIcon(style()->standardIcon(QStyle::SP_TrashIcon));
     connect(m_deleteOverlayAction, &QAction::triggered, m_documentController.get(), &PdfDocumentController::deleteSelectedOverlay);
 
     m_highlightSelectionAction = new QAction(QStringLiteral("Text hervorheben"), this);
@@ -775,6 +1133,10 @@ void MainWindow::createActions()
     m_findAction->setShortcut(QKeySequence::Find);
     connect(m_findAction, &QAction::triggered, this, &MainWindow::focusSearchField);
 
+    m_toggleDarkModeAction = new QAction(QStringLiteral("Dark Mode"), this);
+    m_toggleDarkModeAction->setCheckable(true);
+    connect(m_toggleDarkModeAction, &QAction::toggled, this, &MainWindow::setDarkMode);
+
     m_findNextAction = new QAction(QStringLiteral("Nächster Treffer"), this);
     m_findNextAction->setShortcut(QKeySequence(Qt::Key_F3));
     connect(m_findNextAction, &QAction::triggered, m_documentController.get(), &PdfDocumentController::findNext);
@@ -801,6 +1163,7 @@ void MainWindow::createMenus()
     fileMenu->addAction(m_mergePdfsAction);
     fileMenu->addAction(m_splitPdfAction);
     fileMenu->addAction(m_exportEncryptedPdfAction);
+    fileMenu->addAction(m_exportEditedPdfAction);
     fileMenu->addAction(m_exportRedactedPdfAction);
     fileMenu->addAction(m_showMetadataAction);
     fileMenu->addSeparator();
@@ -829,6 +1192,8 @@ void MainWindow::createMenus()
     viewMenu->addAction(m_zoomInAction);
     viewMenu->addAction(m_zoomOutAction);
     viewMenu->addAction(m_resetZoomAction);
+    viewMenu->addSeparator();
+    viewMenu->addAction(m_toggleDarkModeAction);
 
     QMenu *navigateMenu = menuBar()->addMenu(QStringLiteral("Navigation"));
     navigateMenu->addAction(m_previousPageAction);
@@ -837,38 +1202,43 @@ void MainWindow::createMenus()
 
 void MainWindow::createToolbar()
 {
-    auto *toolbar = addToolBar(QStringLiteral("Hauptwerkzeuge"));
-    toolbar->setMovable(false);
-    toolbar->addAction(m_openAction);
-    toolbar->addAction(m_printAction);
-    toolbar->addAction(m_mergePdfsAction);
-    toolbar->addAction(m_exportEncryptedPdfAction);
-    toolbar->addAction(m_exportRedactedPdfAction);
-    toolbar->addSeparator();
-    toolbar->addAction(m_previousPageAction);
-    toolbar->addAction(m_nextPageAction);
-    toolbar->addSeparator();
-    toolbar->addAction(m_zoomOutAction);
-    toolbar->addAction(m_zoomInAction);
-    toolbar->addAction(m_resetZoomAction);
-    toolbar->addSeparator();
-    toolbar->addAction(m_highlightSelectionAction);
-    toolbar->addAction(m_replaceSelectedTextAction);
-    toolbar->addAction(m_addTextAction);
-    toolbar->addAction(m_redactSelectionAction);
-    toolbar->addAction(m_deleteOverlayAction);
-    toolbar->addSeparator();
+    m_mainToolBar = addToolBar(QStringLiteral("Hauptwerkzeuge"));
+    m_mainToolBar->setObjectName(QStringLiteral("MainToolbar"));
+    m_mainToolBar->setMovable(false);
+    m_mainToolBar->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
+    m_mainToolBar->setIconSize(QSize(16, 16));
+    m_mainToolBar->addAction(m_openAction);
+    m_mainToolBar->addAction(m_printAction);
+    m_mainToolBar->addWidget(createToolbarSpacer());
+    m_mainToolBar->addAction(m_previousPageAction);
+    m_mainToolBar->addAction(m_nextPageAction);
+    m_mainToolBar->addWidget(createToolbarSpacer());
+    m_mainToolBar->addAction(m_zoomOutAction);
+    m_mainToolBar->addAction(m_zoomInAction);
+    m_mainToolBar->addAction(m_resetZoomAction);
+    m_mainToolBar->addWidget(createToolbarSpacer());
+    m_mainToolBar->addAction(m_highlightSelectionAction);
+    m_mainToolBar->addAction(m_replaceSelectedTextAction);
+    m_mainToolBar->addAction(m_addTextAction);
+    m_mainToolBar->addAction(m_redactSelectionAction);
+    m_mainToolBar->addAction(m_deleteOverlayAction);
+    m_mainToolBar->addWidget(createToolbarSpacer(24));
 
     m_searchEdit = new QLineEdit(this);
-    m_searchEdit->setPlaceholderText(QStringLiteral("Im Dokument suchen"));
+    m_searchEdit->setPlaceholderText(QStringLiteral("Suchbegriff im Dokument"));
     m_searchEdit->setClearButtonEnabled(true);
-    m_searchEdit->setMinimumWidth(240);
+    m_searchEdit->setMinimumWidth(280);
+    m_searchEdit->setMaximumWidth(360);
     connect(m_searchEdit, &QLineEdit::returnPressed, this, &MainWindow::triggerSearch);
-    toolbar->addWidget(m_searchEdit);
-
-    toolbar->addAction(m_findNextAction);
-    toolbar->addAction(m_findPreviousAction);
-    toolbar->addAction(m_clearSearchAction);
+    m_mainToolBar->addWidget(m_searchEdit);
+    m_mainToolBar->addAction(m_findNextAction);
+    m_mainToolBar->addAction(m_findPreviousAction);
+    m_mainToolBar->addAction(m_clearSearchAction);
+    m_mainToolBar->addWidget(createToolbarSpacer());
+    m_mainToolBar->addAction(m_toggleDarkModeAction);
+    m_mainToolBar->addWidget(createToolbarSpacer());
+    m_mainToolBar->addAction(m_exportEditedPdfAction);
+    m_mainToolBar->addAction(m_exportRedactedPdfAction);
 }
 
 void MainWindow::createCentralLayout()
@@ -877,6 +1247,7 @@ void MainWindow::createCentralLayout()
     setCentralWidget(m_pdfView);
 
     m_navigationTabs = new QTabWidget(this);
+    m_navigationTabs->setDocumentMode(true);
 
     m_pageListView = new QListView(this);
     m_pageListView->setViewMode(QListView::IconMode);
@@ -891,6 +1262,7 @@ void MainWindow::createCentralLayout()
     m_pageListView->setIconSize(QSize(140, 180));
     m_pageListView->setWordWrap(true);
     m_pageListView->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
+    m_pageListView->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     m_pageThumbnailModel = new PageThumbnailListModel(m_documentController.get(), m_pageListView);
     m_pageListView->setModel(m_pageThumbnailModel);
     connect(m_pageListView, &QListView::clicked, this, &MainWindow::navigateToSidebarPage);
@@ -899,22 +1271,31 @@ void MainWindow::createCentralLayout()
 
     m_outlineTreeWidget = new QTreeWidget(this);
     m_outlineTreeWidget->setHeaderHidden(true);
+    m_outlineTreeWidget->setAlternatingRowColors(true);
     connect(m_outlineTreeWidget, &QTreeWidget::itemActivated, this, &MainWindow::navigateToOutlineItem);
     connect(m_outlineTreeWidget, &QTreeWidget::itemClicked, this, &MainWindow::navigateToOutlineItem);
     m_navigationTabs->addTab(m_outlineTreeWidget, QStringLiteral("Inhalt"));
 
-    auto *dock = new QDockWidget(QStringLiteral("Navigation"), this);
-    dock->setAllowedAreas(Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea);
-    dock->setWidget(m_navigationTabs);
-    addDockWidget(Qt::LeftDockWidgetArea, dock);
+    m_navigationDock = new QDockWidget(QStringLiteral("Navigation"), this);
+    m_navigationDock->setObjectName(QStringLiteral("NavigationDock"));
+    m_navigationDock->setAllowedAreas(Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea);
+    m_navigationDock->setFeatures(QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable);
+    m_navigationDock->setMinimumWidth(250);
+    m_navigationDock->setWidget(m_navigationTabs);
+    addDockWidget(Qt::LeftDockWidgetArea, m_navigationDock);
 }
 
 void MainWindow::createStatusBar()
 {
-    m_pageStatusLabel = new QLabel(QStringLiteral("Seite: -/-"), this);
-    m_zoomLabel = new QLabel(QStringLiteral("Zoom: 100%"), this);
-    m_searchStatusLabel = new QLabel(QStringLiteral("Keine aktive Suche."), this);
+    m_documentStatusLabel = createStatusPill(QStringLiteral("Kein Dokument"), QStringLiteral("statusPillAccent"));
+    m_modeStatusLabel = createStatusPill(QStringLiteral("Bereit"), QStringLiteral("statusPill"));
+    m_pageStatusLabel = createStatusPill(QStringLiteral("Seite: -/-"), QStringLiteral("statusPill"));
+    m_zoomLabel = createStatusPill(QStringLiteral("Zoom: 100%"), QStringLiteral("statusPill"));
+    m_searchStatusLabel = createStatusPill(QStringLiteral("Keine aktive Suche."), QStringLiteral("statusPillAccent"));
 
+    statusBar()->setSizeGripEnabled(false);
+    statusBar()->addWidget(m_documentStatusLabel);
+    statusBar()->addWidget(m_modeStatusLabel);
     statusBar()->addPermanentWidget(m_pageStatusLabel);
     statusBar()->addPermanentWidget(m_zoomLabel);
     statusBar()->addPermanentWidget(m_searchStatusLabel, 1);

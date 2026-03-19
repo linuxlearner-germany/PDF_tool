@@ -12,9 +12,12 @@ class QAction;
 class QLabel;
 class QLineEdit;
 class QListView;
+class QDockWidget;
 class QTabWidget;
+class QToolBar;
 class QTreeWidget;
 class QTreeWidgetItem;
+class QWidget;
 class PdfDocumentController;
 class PdfView;
 class QPdfOperations;
@@ -35,6 +38,7 @@ private slots:
     void mergePdfFiles();
     void splitCurrentPdf();
     void exportEncryptedPdf();
+    void exportEditedPdf();
     void exportRedactedPdf();
     void printDocument();
     void requestNoteAnnotation();
@@ -43,6 +47,7 @@ private slots:
     void replaceSelectedText();
     void editSelectedTextAnnotation();
     void changeSelectedAnnotationColor();
+    void setDarkMode(bool enabled);
     void updateWindowTitle();
     void updateZoomLabel(double factor);
     void updateCurrentPage(int pageIndex, int pageCount, const QString &pageLabel);
@@ -57,11 +62,23 @@ private slots:
     void showPdfViewContextMenu(const QPointF &imagePoint, const QPoint &globalPos);
 
 private:
+    enum class ThemeMode
+    {
+        Light,
+        Dark
+    };
+
     void createActions();
     void createMenus();
     void createToolbar();
     void createCentralLayout();
     void createStatusBar();
+    void applyWindowStyle();
+    void applyTheme(ThemeMode mode);
+    ThemeMode loadThemeSetting() const;
+    void saveThemeSetting(ThemeMode mode) const;
+    QWidget *createToolbarSpacer(int width = 16) const;
+    QLabel *createStatusPill(const QString &text, const QString &objectName) const;
     void refreshNavigationPanels();
     void populateOutlineTree(const QVector<PdfOutlineEntry> &entries, QTreeWidgetItem *parentItem = nullptr);
     void syncThumbnailSelection(int pageIndex);
@@ -71,9 +88,13 @@ private:
     QListView *m_pageListView {nullptr};
     QTreeWidget *m_outlineTreeWidget {nullptr};
     QLineEdit *m_searchEdit {nullptr};
+    QLabel *m_documentStatusLabel {nullptr};
+    QLabel *m_modeStatusLabel {nullptr};
     QLabel *m_zoomLabel {nullptr};
     QLabel *m_pageStatusLabel {nullptr};
     QLabel *m_searchStatusLabel {nullptr};
+    QDockWidget *m_navigationDock {nullptr};
+    QToolBar *m_mainToolBar {nullptr};
     std::unique_ptr<PdfDocumentController> m_documentController;
     std::unique_ptr<QPdfOperations> m_pdfOperations;
     PageThumbnailListModel *m_pageThumbnailModel {nullptr};
@@ -83,6 +104,7 @@ private:
     QAction *m_mergePdfsAction {nullptr};
     QAction *m_splitPdfAction {nullptr};
     QAction *m_exportEncryptedPdfAction {nullptr};
+    QAction *m_exportEditedPdfAction {nullptr};
     QAction *m_exportRedactedPdfAction {nullptr};
     QAction *m_printAction {nullptr};
     QAction *m_showMetadataAction {nullptr};
@@ -107,4 +129,6 @@ private:
     QAction *m_findNextAction {nullptr};
     QAction *m_findPreviousAction {nullptr};
     QAction *m_clearSearchAction {nullptr};
+    QAction *m_toggleDarkModeAction {nullptr};
+    ThemeMode m_themeMode {ThemeMode::Light};
 };

@@ -26,6 +26,7 @@ public:
     explicit PdfView(QWidget *parent = nullptr);
 
 public slots:
+    void setDarkMode(bool enabled);
     void setPageImage(const QImage &image);
     void setSelectionHighlights(const QVector<QRectF> &imageRects);
     void setSearchHighlights(const QVector<QRectF> &imageRects, const QVector<QRectF> &currentImageRects);
