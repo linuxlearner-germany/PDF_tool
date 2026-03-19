@@ -175,6 +175,80 @@ cmake --build build-local
 ./build-local/PDFTool
 ```
 
+## Installation
+
+### Lokale Installation per Installer
+
+Der Installer liegt im Ordner `installer/` und kann das Projekt direkt aus GitHub klonen, bauen und lokal installieren.
+
+Wichtig:
+- den Installer nicht mit `sudo` starten
+- sonst wird nach `/root/.local/...` statt nach deinem Benutzer installiert
+
+Empfohlener Aufruf:
+
+```bash
+cd installer
+bash install.sh
+```
+
+Wenn Abhaengigkeiten fehlen, bietet das Skript unter Debian/Ubuntu direkt eine Installation an.
+
+Ohne Rueckfrage:
+
+```bash
+cd installer
+AUTO_INSTALL_DEPS=1 bash install.sh
+```
+
+Optional mit bestimmtem Branch:
+
+```bash
+cd installer
+REPO_BRANCH=main bash install.sh
+```
+
+### Debian-Paket
+
+Ein Debian-Paket kann mit dem lokalen Checkout gebaut werden:
+
+```bash
+cd installer
+./build_deb.sh
+```
+
+Ausgabe:
+
+```text
+installer/dist/pdf-tool_0.1.0_amd64.deb
+```
+
+Installation des Pakets:
+
+```bash
+sudo dpkg -i installer/dist/pdf-tool_0.1.0_amd64.deb
+```
+
+## Starten
+
+### Nach lokaler Installation
+
+```bash
+~/.local/bin/pdf-tool
+```
+
+Wenn `~/.local/bin` in deinem `PATH` liegt, reicht auch:
+
+```bash
+pdf-tool
+```
+
+### Direkt aus dem Build
+
+```bash
+./build-local/PDFTool
+```
+
 ## Bedienung
 
 ### Wichtige Shortcuts

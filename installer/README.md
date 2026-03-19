@@ -33,6 +33,7 @@ Schnellstart:
 - `libqpdf`
 
 Wenn etwas fehlt, gibt das Skript direkt einen passenden `apt install`-Vorschlag für Debian/Ubuntu aus.
+Auf Debian/Ubuntu kann es die fehlenden Pakete auf Wunsch auch direkt selbst installieren.
 
 GitHub-Quelle für `install.sh`:
 
@@ -44,4 +45,10 @@ Optionaler Branch:
 
 ```bash
 REPO_BRANCH=main ./installer/install.sh
+```
+
+Automatische Paketinstallation ohne Rückfrage:
+
+```bash
+AUTO_INSTALL_DEPS=1 ./installer/install.sh
 ```

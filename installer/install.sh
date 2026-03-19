@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+[ -n "${BASH_VERSION:-}" ] || exec bash "$0" "$@"
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -16,6 +17,7 @@ APP_DIR="${INSTALL_ROOT}"
 BIN_DIR="${HOME}/.local/bin"
 ICON_DIR="${HOME}/.local/share/icons/hicolor/scalable/apps"
 APPLICATIONS_DIR="${HOME}/.local/share/applications"
+AUTO_INSTALL_DEPS="${AUTO_INSTALL_DEPS:-0}"
 
 APT_PACKAGES=(
     git
@@ -72,6 +74,18 @@ require_command() {
     fi
 }
 
+install_missing_dependencies() {
+    if ! require_command apt-get; then
+        print_error "Automatische Abhängigkeitsinstallation wird nur für apt-get unterstützt."
+        exit 1
+    fi
+
+    print_header "Abhängigkeiten installieren"
+    print_info "Installiere benötigte Pakete über apt-get"
+    sudo apt-get update
+    sudo apt-get install -y "${APT_PACKAGES[@]}"
+}
+
 check_system_requirements() {
     local missing_items=()
 
@@ -112,6 +126,23 @@ check_system_requirements() {
         printf "%s\n" "${missing_items[@]}" >&2
         printf "\n%sVorschlag für Debian/Ubuntu:%s\n" "${COLOR_YELLOW}" "${COLOR_RESET}" >&2
         printf "sudo apt update && sudo apt install -y %s\n" "${APT_PACKAGES[*]}" >&2
+        printf "\n"
+
+        if [[ "${AUTO_INSTALL_DEPS}" == "1" ]]; then
+            install_missing_dependencies
+            check_system_requirements
+            return
+        fi
+
+        if require_command apt-get; then
+            read -r -p "Fehlende Pakete jetzt automatisch installieren? [j/N] " answer
+            if [[ "${answer:-}" =~ ^[JjYy]$ ]]; then
+                install_missing_dependencies
+                check_system_requirements
+                return
+            fi
+        fi
+
         exit 1
     fi
 
