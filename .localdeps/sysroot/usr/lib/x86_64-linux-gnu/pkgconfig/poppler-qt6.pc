@@ -1,0 +1,12 @@
+prefix=/home/paul/Nextcloud/PDF_tool/.localdeps/sysroot/usr
+libdir=/home/paul/Nextcloud/PDF_tool/.localdeps/sysroot/usr/lib/x86_64-linux-gnu
+includedir=/home/paul/Nextcloud/PDF_tool/.localdeps/sysroot/usr/include
+
+Name: poppler-qt6
+Description: Qt6 bindings for poppler
+Version: 25.03.0
+Requires: 
+Requires.private: poppler = 25.03.0
+
+Libs: -L${libdir} -lpoppler-qt6
+Cflags: -I${includedir}/poppler/qt6

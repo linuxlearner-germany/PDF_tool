@@ -1,0 +1,10 @@
+prefix=/home/paul/Nextcloud/PDF_tool/.localdeps/sysroot/usr
+exec_prefix=/usr
+libdir=/home/paul/Nextcloud/PDF_tool/.localdeps/sysroot/usr/lib/x86_64-linux-gnu
+includedir=/home/paul/Nextcloud/PDF_tool/.localdeps/sysroot/usr/include
+
+Name: libjpeg
+Description: A SIMD-accelerated JPEG codec that provides the libjpeg API
+Version: 2.1.5
+Libs: -L${libdir} -ljpeg
+Cflags: -I${includedir}

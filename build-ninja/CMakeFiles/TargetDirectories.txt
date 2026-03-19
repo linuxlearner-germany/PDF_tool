@@ -1,0 +1,5 @@
+/home/paul/Nextcloud/PDF_tool/build-ninja/CMakeFiles/PDFTool.dir
+/home/paul/Nextcloud/PDF_tool/build-ninja/CMakeFiles/edit_cache.dir
+/home/paul/Nextcloud/PDF_tool/build-ninja/CMakeFiles/rebuild_cache.dir
+/home/paul/Nextcloud/PDF_tool/build-ninja/CMakeFiles/PDFTool_autogen_timestamp_deps.dir
+/home/paul/Nextcloud/PDF_tool/build-ninja/CMakeFiles/PDFTool_autogen.dir

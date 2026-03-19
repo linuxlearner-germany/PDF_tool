@@ -1,0 +1,10 @@
+prefix=/home/paul/Nextcloud/PDF_tool/.localdeps/sysroot/usr
+libdir=/home/paul/Nextcloud/PDF_tool/.localdeps/sysroot/usr/lib/x86_64-linux-gnu
+includedir=/home/paul/Nextcloud/PDF_tool/.localdeps/sysroot/usr/include
+
+Name: poppler
+Description: PDF rendering library
+Version: 25.03.0
+
+Libs: -L${libdir} -lpoppler
+Cflags: -I${includedir}/poppler

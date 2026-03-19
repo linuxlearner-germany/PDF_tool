@@ -1,0 +1,11 @@
+prefix=/home/paul/Nextcloud/PDF_tool/.localdeps/sysroot/usr
+exec_prefix=${prefix}
+libdir=/home/paul/Nextcloud/PDF_tool/.localdeps/sysroot/usr/lib/x86_64-linux-gnu
+includedir=/home/paul/Nextcloud/PDF_tool/.localdeps/sysroot/usr/include
+
+Name: libqpdf
+Description: PDF transformation library
+Version: 12.2.0
+Requires.private: zlib, libjpeg
+Libs: -L${libdir} -lqpdf
+Cflags: -I${includedir}

@@ -1,0 +1,13 @@
+# ninja log v6
+2	319	1773942649360471091	PDFTool_autogen/timestamp	f65382fd56c8b965
+2	319	1773942649360471091	PDFTool_autogen/mocs_compilation.cpp	f65382fd56c8b965
+2	319	1773942649360471091	/home/paul/Nextcloud/PDF_tool/build/PDFTool_autogen/timestamp	f65382fd56c8b965
+2	319	1773942649360471091	/home/paul/Nextcloud/PDF_tool/build/PDFTool_autogen/mocs_compilation.cpp	f65382fd56c8b965
+321	1053	1773942649372471390	CMakeFiles/PDFTool.dir/src/operations/QPdfOperations.cpp.o	4e43bc61a690445d
+321	1272	1773942649372471390	CMakeFiles/PDFTool.dir/src/document/PdfDocumentController.cpp.o	4ba4ba1b8dd75dc6
+320	1365	1773942649368471290	CMakeFiles/PDFTool.dir/PDFTool_autogen/mocs_compilation.cpp.o	fd1eae9abfa97d90
+321	1519	1773942649372471390	CMakeFiles/PDFTool.dir/src/rendering/PopplerAdapter.cpp.o	cf9e54adeb1110cf
+320	1616	1773942649368471290	CMakeFiles/PDFTool.dir/src/main.cpp.o	6706125a2a361720
+321	1675	1773942649372471390	CMakeFiles/PDFTool.dir/src/ui/PdfView.cpp.o	eb545d8d3ea26e03
+320	1735	1773942649368471290	CMakeFiles/PDFTool.dir/src/ui/MainWindow.cpp.o	719e91bc6b943672
+1735	1974	1773942650784506717	PDFTool	aa6c0c7e50b40eea
