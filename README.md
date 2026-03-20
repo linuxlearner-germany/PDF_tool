@@ -3,6 +3,8 @@
 Linux-Desktop-App zum Ansehen, Kommentieren, Redigieren und Exportieren von PDFs.
 Das Projekt basiert auf `Qt 6`, `Poppler` und optional `qpdf` fuer weitergehende PDF-Operationen.
 
+Hinweis: Der aktuelle Stand ist eine Beta-Version.
+
 ## Ueberblick
 
 PDFTool richtet sich an lokale Desktop-Workflows, bei denen PDFs nicht nur gelesen, sondern direkt bearbeitet werden sollen:
@@ -78,7 +80,14 @@ Wichtig:
 
 ## Status
 
-Das Projekt ist deutlich ueber ein MVP hinaus und funktioniert bereits als produktiver Desktop-Viewer mit Bearbeitungs- und Export-Workflow.
+Das Projekt ist derzeit eine Beta.
+Es ist deutlich ueber ein MVP hinaus und funktioniert bereits als produktiver Desktop-Viewer mit Bearbeitungs- und Export-Workflow, befindet sich aber noch nicht in einem als stabil freigegebenen Release-Zustand.
+
+Das bedeutet insbesondere:
+
+- Funktionsumfang und Grund-Workflow sind bereits gut nutzbar
+- es kann noch zu Kantenfaellen, Export-Unterschieden oder UI-Unsauberkeiten kommen
+- Verhalten und Datenformate koennen sich vor einem stabilen Release noch aendern
 
 Aktuell nicht enthalten:
 

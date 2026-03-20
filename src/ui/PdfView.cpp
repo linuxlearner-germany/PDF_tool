@@ -166,20 +166,27 @@ void PdfView::setSearchHighlights(const QVector<QRectF> &imageRects, const QVect
 
 void PdfView::setAnnotationOverlays(const QVector<PdfAnnotationOverlay> &overlays)
 {
-    clearGenericItems(m_annotationItems);
     m_annotationOverlays = overlays;
+    redrawAnnotationOverlays();
+}
 
-    for (const PdfAnnotationOverlay &overlay : overlays) {
+void PdfView::redrawAnnotationOverlays()
+{
+    clearGenericItems(m_annotationItems);
+
+    for (const PdfAnnotationOverlay &overlay : m_annotationOverlays) {
         switch (overlay.kind) {
         case PdfAnnotationKind::Highlight:
-            for (const QRectF &rect : overlay.imageRects) {
+            for (const QRectF &rawRect : overlay.imageRects) {
+                const QRectF rect = previewRectForSelectedOverlay(overlay, rawRect);
                 auto *item = m_scene.addRect(rect, QPen(Qt::NoPen), QBrush(overlay.color));
                 item->setZValue(2.0);
                 m_annotationItems.append(item);
             }
             break;
         case PdfAnnotationKind::Rectangle:
-            for (const QRectF &rect : overlay.imageRects) {
+            for (const QRectF &rawRect : overlay.imageRects) {
+                const QRectF rect = previewRectForSelectedOverlay(overlay, rawRect);
                 QPen pen(overlay.selected ? QColor(13, 71, 161) : overlay.color, overlay.selected ? 2.5 : 1.8);
                 auto *item = m_scene.addRect(rect, pen, Qt::NoBrush);
                 item->setZValue(6.0);
@@ -187,7 +194,8 @@ void PdfView::setAnnotationOverlays(const QVector<PdfAnnotationOverlay> &overlay
             }
             break;
         case PdfAnnotationKind::Note:
-            for (const QRectF &rect : overlay.imageRects) {
+            for (const QRectF &rawRect : overlay.imageRects) {
+                const QRectF rect = previewRectForSelectedOverlay(overlay, rawRect);
                 auto *item = m_scene.addRect(rect, QPen(QColor(121, 85, 72), overlay.selected ? 2.0 : 1.0),
                                              QBrush(overlay.selected ? QColor(255, 214, 0) : overlay.color));
                 item->setToolTip(overlay.text);
@@ -202,7 +210,8 @@ void PdfView::setAnnotationOverlays(const QVector<PdfAnnotationOverlay> &overlay
             }
             break;
         case PdfAnnotationKind::FreeText:
-            for (const QRectF &rect : overlay.imageRects) {
+            for (const QRectF &rawRect : overlay.imageRects) {
+                const QRectF rect = previewRectForSelectedOverlay(overlay, rawRect);
                 QPen pen(overlay.selected ? QColor(21, 101, 192) : QColor(120, 120, 120),
                          overlay.selected ? 2.0 : 1.0);
                 auto *item = m_scene.addRect(rect, pen, QBrush(overlay.color));
@@ -231,7 +240,8 @@ void PdfView::setAnnotationOverlays(const QVector<PdfAnnotationOverlay> &overlay
             }
             break;
         case PdfAnnotationKind::Signature:
-            for (const QRectF &rect : overlay.imageRects) {
+            for (const QRectF &rawRect : overlay.imageRects) {
+                const QRectF rect = previewRectForSelectedOverlay(overlay, rawRect);
                 auto *item = m_scene.addRect(
                     rect,
                     QPen(overlay.selected ? QColor(15, 108, 115) : QColor(110, 110, 110),
@@ -252,10 +262,65 @@ void PdfView::setAnnotationOverlays(const QVector<PdfAnnotationOverlay> &overlay
                     pixmapItem->setZValue(6.1);
                     m_annotationItems.append(pixmapItem);
                 }
+
+                if (overlay.selected) {
+                    auto *handleItem = m_scene.addRect(
+                        resizeHandleRectFor(rect),
+                        QPen(QColor(15, 108, 115), 1.0),
+                        QBrush(QColor(15, 108, 115)));
+                    handleItem->setZValue(6.4);
+                    m_annotationItems.append(handleItem);
+                }
             }
             break;
         }
     }
+}
+
+QRectF PdfView::previewRectForSelectedOverlay(const PdfAnnotationOverlay &overlay, const QRectF &rect) const
+{
+    if (!overlay.selected) {
+        return rect;
+    }
+
+    if (m_isDraggingSignature
+        && (overlay.kind == PdfAnnotationKind::Signature || overlay.kind == PdfAnnotationKind::FreeText)) {
+        return QRectF(rect.translated(m_dragCurrent - m_dragStart)).normalized();
+    }
+
+    if (m_isResizingTextEdit && overlay.kind == PdfAnnotationKind::FreeText) {
+        QRectF previewRect = rect;
+        previewRect.setSize(QSizeF(qMax(48.0, rect.width() + m_dragCurrent.x() - m_dragStart.x()),
+                                   qMax(24.0, rect.height() + m_dragCurrent.y() - m_dragStart.y())));
+        return previewRect.normalized();
+    }
+
+    if (m_isResizingSignature && overlay.kind == PdfAnnotationKind::Signature) {
+        const double currentWidth = qMax(1.0, rect.width());
+        const double currentHeight = qMax(1.0, rect.height());
+        const double aspectRatio = currentWidth / currentHeight;
+        const double deltaX = m_dragCurrent.x() - m_dragStart.x();
+        const double deltaY = m_dragCurrent.y() - m_dragStart.y();
+        const double requestedWidth = qMax(32.0, currentWidth + deltaX);
+        const double requestedHeight = qMax(16.0, currentHeight + deltaY);
+
+        QSizeF newSize;
+        const double normalizedDeltaX = std::abs(deltaX) / currentWidth;
+        const double normalizedDeltaY = std::abs(deltaY) / currentHeight;
+        if (normalizedDeltaX >= normalizedDeltaY) {
+            newSize.setWidth(requestedWidth);
+            newSize.setHeight(qMax(16.0, requestedWidth / aspectRatio));
+        } else {
+            newSize.setHeight(requestedHeight);
+            newSize.setWidth(qMax(32.0, requestedHeight * aspectRatio));
+        }
+
+        QRectF previewRect = rect;
+        previewRect.setSize(newSize);
+        return previewRect.normalized();
+    }
+
+    return rect;
 }
 
 void PdfView::setFormFieldOverlays(const QVector<PdfFormFieldOverlay> &overlays)
@@ -273,8 +338,14 @@ void PdfView::setFormFieldOverlays(const QVector<PdfFormFieldOverlay> &overlays)
             lineEdit->setText(overlay.textValue);
             lineEdit->setReadOnly(overlay.readOnly);
             lineEdit->setPlaceholderText(overlay.label);
+            QFont font = lineEdit->font();
+            font.setFamily(overlay.textStyle.fontFamily);
+            font.setPointSizeF(std::max(1.0, overlay.textStyle.fontSize));
+            lineEdit->setFont(font);
             lineEdit->setStyleSheet(QStringLiteral(
-                "QLineEdit { background: rgba(255,255,255,210); border: 1px solid #1976d2; padding: 2px; }"));
+                "QLineEdit { background: rgba(255,255,255,210); border: 1px solid #1976d2; padding: 2px; color: %1; }")
+                                    .arg((overlay.textStyle.textColor.isValid() ? overlay.textStyle.textColor : Qt::black)
+                                             .name(QColor::HexRgb)));
 
             connect(lineEdit, &QLineEdit::editingFinished, this, [this, lineEdit, fieldId = overlay.id]() {
                 emit formTextEdited(fieldId, lineEdit->text());
@@ -333,11 +404,23 @@ void PdfView::mousePressEvent(QMouseEvent *event)
         }
 
         const QPointF scenePoint = clampToPage(mapToScene(event->position().toPoint()));
+        if (isSelectedSignatureResizeHandleHit(scenePoint)) {
+            setFocus();
+            m_isResizingSignature = true;
+            m_dragStart = scenePoint;
+            m_dragCurrent = scenePoint;
+            redrawAnnotationOverlays();
+            setCursor(Qt::SizeFDiagCursor);
+            event->accept();
+            return;
+        }
+
         if (isSelectedTextResizeHandleHit(scenePoint)) {
             setFocus();
             m_isResizingTextEdit = true;
             m_dragStart = scenePoint;
             m_dragCurrent = scenePoint;
+            redrawAnnotationOverlays();
             setCursor(Qt::SizeFDiagCursor);
             event->accept();
             return;
@@ -348,6 +431,7 @@ void PdfView::mousePressEvent(QMouseEvent *event)
             m_isDraggingSignature = true;
             m_dragStart = scenePoint;
             m_dragCurrent = scenePoint;
+            redrawAnnotationOverlays();
             setCursor(Qt::ClosedHandCursor);
             event->accept();
             return;
@@ -371,14 +455,23 @@ void PdfView::mousePressEvent(QMouseEvent *event)
 
 void PdfView::mouseMoveEvent(QMouseEvent *event)
 {
+    if (m_isResizingSignature) {
+        m_dragCurrent = clampToPage(mapToScene(event->position().toPoint()));
+        redrawAnnotationOverlays();
+        event->accept();
+        return;
+    }
+
     if (m_isResizingTextEdit) {
         m_dragCurrent = clampToPage(mapToScene(event->position().toPoint()));
+        redrawAnnotationOverlays();
         event->accept();
         return;
     }
 
     if (m_isDraggingSignature) {
         m_dragCurrent = clampToPage(mapToScene(event->position().toPoint()));
+        redrawAnnotationOverlays();
         event->accept();
         return;
     }
@@ -396,26 +489,41 @@ void PdfView::mouseMoveEvent(QMouseEvent *event)
 
 void PdfView::mouseReleaseEvent(QMouseEvent *event)
 {
+    if (m_isResizingSignature && event->button() == Qt::LeftButton) {
+        m_dragCurrent = clampToPage(mapToScene(event->position().toPoint()));
+        const QPointF delta = m_dragCurrent - m_dragStart;
+        if (std::abs(delta.x()) >= 1.0 || std::abs(delta.y()) >= 1.0) {
+            emit signatureResizeRequested(delta);
+        }
+        m_isResizingSignature = false;
+        unsetCursor();
+        redrawAnnotationOverlays();
+        event->accept();
+        return;
+    }
+
     if (m_isResizingTextEdit && event->button() == Qt::LeftButton) {
         m_dragCurrent = clampToPage(mapToScene(event->position().toPoint()));
-        m_isResizingTextEdit = false;
-        unsetCursor();
         const QPointF delta = m_dragCurrent - m_dragStart;
         if (std::abs(delta.x()) >= 1.0 || std::abs(delta.y()) >= 1.0) {
             emit textEditResizeRequested(delta);
         }
+        m_isResizingTextEdit = false;
+        unsetCursor();
+        redrawAnnotationOverlays();
         event->accept();
         return;
     }
 
     if (m_isDraggingSignature && event->button() == Qt::LeftButton) {
         m_dragCurrent = clampToPage(mapToScene(event->position().toPoint()));
-        m_isDraggingSignature = false;
-        unsetCursor();
         const QPointF delta = m_dragCurrent - m_dragStart;
         if (std::abs(delta.x()) >= 1.0 || std::abs(delta.y()) >= 1.0) {
             emit signatureMoveRequested(delta);
         }
+        m_isDraggingSignature = false;
+        unsetCursor();
+        redrawAnnotationOverlays();
         event->accept();
         return;
     }
@@ -506,6 +614,18 @@ void PdfView::wheelEvent(QWheelEvent *event)
     QGraphicsView::wheelEvent(event);
 }
 
+QRectF PdfView::selectedSignatureResizeHandleRect() const
+{
+    for (const PdfAnnotationOverlay &overlay : m_annotationOverlays) {
+        if (!overlay.selected || overlay.kind != PdfAnnotationKind::Signature || overlay.imageRects.isEmpty()) {
+            continue;
+        }
+        return resizeHandleRectFor(overlay.imageRects.first());
+    }
+
+    return {};
+}
+
 QRectF PdfView::selectedTextResizeHandleRect() const
 {
     for (const PdfAnnotationOverlay &overlay : m_annotationOverlays) {
@@ -525,6 +645,12 @@ QPointF PdfView::clampToPage(const QPointF &scenePoint) const
                    std::clamp(scenePoint.y(), pageRect.top(), pageRect.bottom()));
 }
 
+bool PdfView::isSelectedSignatureResizeHandleHit(const QPointF &scenePoint) const
+{
+    const QRectF handleRect = selectedSignatureResizeHandleRect();
+    return handleRect.isValid() && handleRect.contains(scenePoint);
+}
+
 bool PdfView::isSelectedTextResizeHandleHit(const QPointF &scenePoint) const
 {
     const QRectF handleRect = selectedTextResizeHandleRect();
@@ -542,7 +668,8 @@ bool PdfView::isSelectedMovableAnnotationHit(const QPointF &scenePoint) const
             continue;
         }
         for (const QRectF &rect : overlay.imageRects) {
-            if (overlay.kind == PdfAnnotationKind::FreeText && resizeHandleRectFor(rect).contains(scenePoint)) {
+            if ((overlay.kind == PdfAnnotationKind::FreeText || overlay.kind == PdfAnnotationKind::Signature)
+                && resizeHandleRectFor(rect).contains(scenePoint)) {
                 continue;
             }
             if (rect.contains(scenePoint)) {

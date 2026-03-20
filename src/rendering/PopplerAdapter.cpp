@@ -379,6 +379,9 @@ QVector<PdfFormField> PopplerAdapter::formFields(int pageIndex)
         formField.pageIndex = pageIndex;
         formField.name = field->fullyQualifiedName();
         formField.label = field->uiName().isEmpty() ? field->name() : field->uiName();
+        formField.textStyle.fontFamily = QStringLiteral("Helvetica");
+        formField.textStyle.fontSize = 12.0;
+        formField.textStyle.textColor = Qt::black;
         formField.readOnly = field->isReadOnly();
 
         const QRectF normalizedRect = field->rect();

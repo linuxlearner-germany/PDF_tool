@@ -16,7 +16,9 @@ public:
     QVector<PdfFormField> fields() const;
     QVector<PdfFormField> fieldsForPage(int pageIndex) const;
     bool setTextValue(const QString &fieldId, const QString &text);
+    bool setTextStyle(const QString &fieldId, const PdfTextStyle &style);
     bool setChecked(const QString &fieldId, bool checked);
+    bool textFieldStyle(const QString &fieldId, PdfTextStyle &style) const;
     QString fieldIdAt(int pageIndex, const QPointF &pagePoint) const;
     bool remapPages(const QVector<int> &newOrder);
 

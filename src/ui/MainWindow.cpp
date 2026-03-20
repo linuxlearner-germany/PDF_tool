@@ -29,6 +29,7 @@
 #include <QSignalBlocker>
 #include <QSpinBox>
 #include <QStatusBar>
+#include <QStackedWidget>
 #include <QStyle>
 #include <QTabWidget>
 #include <QTextEdit>
@@ -93,6 +94,12 @@ struct TextAnnotationDialogResult
     QString text;
     PdfTextStyle style;
     QColor backgroundColor {255, 255, 255, 230};
+    bool accepted {false};
+};
+
+struct TextStyleDialogResult
+{
+    PdfTextStyle style;
     bool accepted {false};
 };
 
@@ -192,6 +199,60 @@ TextAnnotationDialogResult promptForTextAnnotation(
     return result;
 }
 
+TextStyleDialogResult promptForTextStyle(
+    QWidget *parent,
+    const QString &title,
+    const PdfTextStyle &initialStyle = PdfTextStyle())
+{
+    QDialog dialog(parent);
+    dialog.setWindowTitle(title);
+
+    auto *layout = new QVBoxLayout(&dialog);
+    auto *formLayout = new QFormLayout();
+    layout->addLayout(formLayout);
+
+    auto *fontFamilyBox = new QComboBox(&dialog);
+    fontFamilyBox->addItems(supportedPdfFontFamilies());
+    const QString initialFamily = normalizedPdfFontFamily(initialStyle.fontFamily);
+    const int initialFamilyIndex = fontFamilyBox->findText(initialFamily);
+    fontFamilyBox->setCurrentIndex(initialFamilyIndex >= 0 ? initialFamilyIndex : 0);
+    formLayout->addRow(QStringLiteral("Schriftart:"), fontFamilyBox);
+
+    auto *fontSizeSpin = new QSpinBox(&dialog);
+    fontSizeSpin->setRange(6, 96);
+    fontSizeSpin->setValue(qRound(initialStyle.fontSize > 0.0 ? initialStyle.fontSize : 12.0));
+    formLayout->addRow(QStringLiteral("Schriftgröße:"), fontSizeSpin);
+
+    QColor textColor = initialStyle.textColor.isValid() ? initialStyle.textColor : QColor(Qt::black);
+    auto *textColorButton = new QPushButton(&dialog);
+    updateColorButton(textColorButton, textColor);
+    QObject::connect(textColorButton, &QPushButton::clicked, &dialog, [&dialog, textColorButton, &textColor]() {
+        const QColor selected = QColorDialog::getColor(textColor, &dialog, QStringLiteral("Schriftfarbe wählen"), QColorDialog::ShowAlphaChannel);
+        if (!selected.isValid()) {
+            return;
+        }
+        textColor = selected;
+        updateColorButton(textColorButton, textColor);
+    });
+    formLayout->addRow(QStringLiteral("Schriftfarbe:"), textColorButton);
+
+    auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
+    QObject::connect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
+    QObject::connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
+    layout->addWidget(buttons);
+
+    TextStyleDialogResult result;
+    result.accepted = (dialog.exec() == QDialog::Accepted);
+    if (!result.accepted) {
+        return result;
+    }
+
+    result.style.fontFamily = normalizedPdfFontFamily(fontFamilyBox->currentText());
+    result.style.fontSize = fontSizeSpin->value();
+    result.style.textColor = textColor;
+    return result;
+}
+
 PasswordDialogResult promptForPasswords(
     QWidget *parent,
     const QString &title,
@@ -255,9 +316,10 @@ MainWindow::MainWindow(QWidget *parent)
     , m_pdfOperations(std::make_unique<QPdfOperations>())
 {
     createActions();
-    createMenus();
-    createToolbar();
     createCentralLayout();
+    createInspectorDock();
+    createToolbar();
+    createMenus();
     createStatusBar();
     m_themeMode = loadThemeSetting();
     applyTheme(m_themeMode);
@@ -333,6 +395,8 @@ MainWindow::MainWindow(QWidget *parent)
             m_documentController.get(), &PdfDocumentController::selectOverlayAt);
     connect(m_pdfView, &PdfView::signatureMoveRequested,
             m_documentController.get(), &PdfDocumentController::moveSelectedSignatureBy);
+    connect(m_pdfView, &PdfView::signatureResizeRequested,
+            m_documentController.get(), &PdfDocumentController::resizeSelectedSignatureBy);
     connect(m_pdfView, &PdfView::textEditResizeRequested,
             m_documentController.get(), &PdfDocumentController::resizeSelectedTextEditBy);
     connect(m_pdfView, &PdfView::contextMenuRequested,
@@ -350,6 +414,7 @@ MainWindow::MainWindow(QWidget *parent)
     updateSelectionDependentActions(false);
     updateOverlaySelectionActions(false);
     updateHistoryActions(false, false);
+    refreshInspector();
     m_documentController->setThumbnailSize(QSize(140, 180));
 }
 
@@ -866,6 +931,29 @@ void MainWindow::editSelectedTextAnnotation()
     m_documentController->updateSelectedTextEdit(result.text, result.style, result.backgroundColor);
 }
 
+void MainWindow::editFormFieldTextStyle()
+{
+    QString fieldId;
+    QString fieldLabel;
+    PdfTextStyle style;
+    if (!m_documentController->textFormFieldStyleAt(m_lastContextImagePoint, fieldId, fieldLabel, style)) {
+        return;
+    }
+
+    const TextStyleDialogResult result = promptForTextStyle(
+        this,
+        fieldLabel.trimmed().isEmpty()
+            ? QStringLiteral("Formularschrift anpassen")
+            : QStringLiteral("Formularschrift anpassen: %1").arg(fieldLabel),
+        style);
+
+    if (!result.accepted) {
+        return;
+    }
+
+    m_documentController->setFormFieldTextStyle(fieldId, result.style);
+}
+
 void MainWindow::updateWindowTitle()
 {
     const QString title = m_documentController->hasDocument()
@@ -1022,6 +1110,7 @@ void MainWindow::updateOverlaySelectionActions(bool hasSelection)
     if (m_modeStatusLabel && hasSelection) {
         m_modeStatusLabel->setText(QStringLiteral("Objekt ausgewählt"));
     }
+    refreshInspector();
 }
 
 void MainWindow::updateSearchState(bool hasResults, int currentHit, int totalHits, const QString &statusText)
@@ -1569,6 +1658,14 @@ void MainWindow::showPdfViewContextMenu(const QPointF &imagePoint, const QPoint 
         menu.addAction(m_changeAnnotationColorAction);
     }
 
+    QString formFieldId;
+    QString formFieldLabel;
+    PdfTextStyle formFieldStyle;
+    if (m_documentController->textFormFieldStyleAt(imagePoint, formFieldId, formFieldLabel, formFieldStyle)) {
+        menu.addSeparator();
+        menu.addAction(m_editFormFieldTextStyleAction);
+    }
+
     if (!menu.isEmpty()) {
         menu.exec(globalPos);
     }
@@ -1695,6 +1792,9 @@ void MainWindow::createActions()
     m_editTextAction = new QAction(QStringLiteral("Textfeld bearbeiten"), this);
     connect(m_editTextAction, &QAction::triggered, this, &MainWindow::editSelectedTextAnnotation);
 
+    m_editFormFieldTextStyleAction = new QAction(QStringLiteral("Formularschrift anpassen"), this);
+    connect(m_editFormFieldTextStyleAction, &QAction::triggered, this, &MainWindow::editFormFieldTextStyle);
+
     m_changeAnnotationColorAction = new QAction(QStringLiteral("Annotierungsfarbe ändern"), this);
     connect(m_changeAnnotationColorAction, &QAction::triggered, this, &MainWindow::changeSelectedAnnotationColor);
 
@@ -1798,12 +1898,33 @@ void MainWindow::createMenus()
     editMenu->addAction(m_findPreviousAction);
     editMenu->addAction(m_clearSearchAction);
 
+    QMenu *toolsMenu = menuBar()->addMenu(QStringLiteral("Werkzeuge"));
+    toolsMenu->addAction(m_highlightSelectionAction);
+    toolsMenu->addAction(m_replaceSelectedTextAction);
+    toolsMenu->addAction(m_addTextAction);
+    toolsMenu->addAction(m_editTextAction);
+    toolsMenu->addAction(m_rectangleAnnotationAction);
+    toolsMenu->addAction(m_noteAnnotationAction);
+    toolsMenu->addAction(m_editNoteAnnotationAction);
+    toolsMenu->addAction(m_insertSignatureAction);
+    toolsMenu->addAction(m_changeAnnotationColorAction);
+    toolsMenu->addAction(m_editFormFieldTextStyleAction);
+    toolsMenu->addSeparator();
+    toolsMenu->addAction(m_redactSelectionAction);
+    toolsMenu->addAction(m_runOcrCurrentPageAction);
+    toolsMenu->addAction(m_runOcrSelectionAction);
+
     QMenu *viewMenu = menuBar()->addMenu(QStringLiteral("Ansicht"));
     viewMenu->addAction(m_zoomInAction);
     viewMenu->addAction(m_zoomOutAction);
     viewMenu->addAction(m_resetZoomAction);
     viewMenu->addSeparator();
     viewMenu->addAction(m_toggleDarkModeAction);
+    viewMenu->addSeparator();
+    viewMenu->addAction(m_navigationDock->toggleViewAction());
+    viewMenu->addAction(m_inspectorDock->toggleViewAction());
+    viewMenu->addAction(m_mainToolBar->toggleViewAction());
+    viewMenu->addAction(m_toolsToolBar->toggleViewAction());
 
     QMenu *navigateMenu = menuBar()->addMenu(QStringLiteral("Navigation"));
     navigateMenu->addAction(m_previousPageAction);
@@ -1812,6 +1933,13 @@ void MainWindow::createMenus()
     navigateMenu->addAction(m_movePageLeftAction);
     navigateMenu->addAction(m_movePageRightAction);
     navigateMenu->addAction(m_deletePageAction);
+
+    QMenu *windowMenu = menuBar()->addMenu(QStringLiteral("Fenster"));
+    windowMenu->addAction(m_navigationDock->toggleViewAction());
+    windowMenu->addAction(m_inspectorDock->toggleViewAction());
+    windowMenu->addSeparator();
+    windowMenu->addAction(m_mainToolBar->toggleViewAction());
+    windowMenu->addAction(m_toolsToolBar->toggleViewAction());
 }
 
 void MainWindow::createToolbar()
@@ -1876,12 +2004,21 @@ void MainWindow::createToolbar()
     m_toolsToolBar->addAction(m_highlightSelectionAction);
     m_toolsToolBar->addAction(m_replaceSelectedTextAction);
     m_toolsToolBar->addAction(m_addTextAction);
+    m_toolsToolBar->addAction(m_editTextAction);
+    m_toolsToolBar->addAction(m_rectangleAnnotationAction);
+    m_toolsToolBar->addAction(m_noteAnnotationAction);
     m_toolsToolBar->addAction(m_insertSignatureAction);
+    m_toolsToolBar->addAction(m_changeAnnotationColorAction);
+    m_toolsToolBar->addAction(m_editFormFieldTextStyleAction);
     m_toolsToolBar->addAction(m_redactSelectionAction);
     m_toolsToolBar->addAction(m_deleteOverlayAction);
     m_toolsToolBar->addWidget(createToolbarSpacer(8));
     m_toolsToolBar->addAction(m_runOcrCurrentPageAction);
     m_toolsToolBar->addAction(m_runOcrSelectionAction);
+    m_toolsToolBar->addWidget(createToolbarSpacer(8));
+    m_toolsToolBar->addAction(m_mergePdfsAction);
+    m_toolsToolBar->addAction(m_splitPdfAction);
+    m_toolsToolBar->addAction(m_showMetadataAction);
     m_toolsToolBar->addWidget(createToolbarSpacer(8));
     m_toolsToolBar->addAction(m_exportEditedPdfAction);
     m_toolsToolBar->addAction(m_exportRedactedPdfAction);
@@ -2037,6 +2174,181 @@ void MainWindow::createCentralLayout()
     m_navigationDock->setMinimumWidth(250);
     m_navigationDock->setWidget(m_navigationTabs);
     addDockWidget(Qt::LeftDockWidgetArea, m_navigationDock);
+}
+
+void MainWindow::createInspectorDock()
+{
+    m_inspectorStack = new QStackedWidget(this);
+
+    m_inspectorEmptyPage = new QWidget(this);
+    auto *emptyLayout = new QVBoxLayout(m_inspectorEmptyPage);
+    auto *emptyLabel = new QLabel(QStringLiteral("Kein Objekt ausgewählt.\n\nWähle eine Textnotiz, ein Textfeld oder eine Unterschrift aus."));
+    emptyLabel->setWordWrap(true);
+    emptyLayout->addWidget(emptyLabel);
+    emptyLayout->addStretch();
+    m_inspectorStack->addWidget(m_inspectorEmptyPage);
+
+    m_inspectorTextPage = new QWidget(this);
+    auto *textLayout = new QVBoxLayout(m_inspectorTextPage);
+    auto *textForm = new QFormLayout();
+    m_inspectorTextEdit = new QTextEdit(m_inspectorTextPage);
+    m_inspectorFontFamilyBox = new QComboBox(m_inspectorTextPage);
+    m_inspectorFontFamilyBox->addItems(supportedPdfFontFamilies());
+    m_inspectorFontSizeSpin = new QSpinBox(m_inspectorTextPage);
+    m_inspectorFontSizeSpin->setRange(6, 96);
+    m_inspectorTextColorButton = new QPushButton(m_inspectorTextPage);
+    m_inspectorBackgroundColorButton = new QPushButton(m_inspectorTextPage);
+    textForm->addRow(QStringLiteral("Text:"), m_inspectorTextEdit);
+    textForm->addRow(QStringLiteral("Schriftart:"), m_inspectorFontFamilyBox);
+    textForm->addRow(QStringLiteral("Schriftgröße:"), m_inspectorFontSizeSpin);
+    textForm->addRow(QStringLiteral("Schriftfarbe:"), m_inspectorTextColorButton);
+    textForm->addRow(QStringLiteral("Hintergrund:"), m_inspectorBackgroundColorButton);
+    textLayout->addLayout(textForm);
+    auto *textApplyButton = new QPushButton(QStringLiteral("Textfeld anwenden"), m_inspectorTextPage);
+    textLayout->addWidget(textApplyButton);
+    textLayout->addStretch();
+    m_inspectorStack->addWidget(m_inspectorTextPage);
+
+    m_inspectorNotePage = new QWidget(this);
+    auto *noteLayout = new QVBoxLayout(m_inspectorNotePage);
+    auto *noteForm = new QFormLayout();
+    m_inspectorNoteEdit = new QTextEdit(m_inspectorNotePage);
+    m_inspectorNoteColorButton = new QPushButton(m_inspectorNotePage);
+    noteForm->addRow(QStringLiteral("Kommentar:"), m_inspectorNoteEdit);
+    noteForm->addRow(QStringLiteral("Farbe:"), m_inspectorNoteColorButton);
+    noteLayout->addLayout(noteForm);
+    auto *noteApplyButton = new QPushButton(QStringLiteral("Textnotiz anwenden"), m_inspectorNotePage);
+    noteLayout->addWidget(noteApplyButton);
+    noteLayout->addStretch();
+    m_inspectorStack->addWidget(m_inspectorNotePage);
+
+    m_inspectorSignaturePage = new QWidget(this);
+    auto *signatureLayout = new QVBoxLayout(m_inspectorSignaturePage);
+    auto *signatureLabel = new QLabel(QStringLiteral(
+        "Unterschrift ausgewählt.\n\nVerschieben per Drag.\nGröße über den Ziehpunkt unten rechts ändern."));
+    signatureLabel->setWordWrap(true);
+    signatureLayout->addWidget(signatureLabel);
+    signatureLayout->addStretch();
+    m_inspectorStack->addWidget(m_inspectorSignaturePage);
+
+    connect(textApplyButton, &QPushButton::clicked, this, &MainWindow::applyInspectorChanges);
+    connect(noteApplyButton, &QPushButton::clicked, this, &MainWindow::applyInspectorChanges);
+
+    connect(m_inspectorTextColorButton, &QPushButton::clicked, this, [this]() {
+        const QColor selected = QColorDialog::getColor(
+            m_inspectorTextColor.isValid() ? m_inspectorTextColor : QColor(Qt::black),
+            this,
+            QStringLiteral("Schriftfarbe wählen"),
+            QColorDialog::ShowAlphaChannel);
+        if (!selected.isValid()) {
+            return;
+        }
+        m_inspectorTextColor = selected;
+        updateColorButton(m_inspectorTextColorButton, selected);
+    });
+    connect(m_inspectorBackgroundColorButton, &QPushButton::clicked, this, [this]() {
+        const QColor selected = QColorDialog::getColor(
+            m_inspectorBackgroundColor.isValid() ? m_inspectorBackgroundColor : QColor(255, 255, 255, 230),
+            this,
+            QStringLiteral("Hintergrundfarbe wählen"),
+            QColorDialog::ShowAlphaChannel);
+        if (!selected.isValid()) {
+            return;
+        }
+        m_inspectorBackgroundColor = selected;
+        updateColorButton(m_inspectorBackgroundColorButton, selected);
+    });
+    connect(m_inspectorNoteColorButton, &QPushButton::clicked, this, [this]() {
+        const QColor selected = QColorDialog::getColor(
+            m_inspectorNoteColor.isValid() ? m_inspectorNoteColor : QColor(255, 193, 7, 210),
+            this,
+            QStringLiteral("Notizfarbe wählen"),
+            QColorDialog::ShowAlphaChannel);
+        if (!selected.isValid()) {
+            return;
+        }
+        m_inspectorNoteColor = selected;
+        updateColorButton(m_inspectorNoteColorButton, selected);
+    });
+
+    m_inspectorDock = new QDockWidget(QStringLiteral("Eigenschaften"), this);
+    m_inspectorDock->setObjectName(QStringLiteral("InspectorDock"));
+    m_inspectorDock->setAllowedAreas(Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea);
+    m_inspectorDock->setFeatures(QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable);
+    m_inspectorDock->setMinimumWidth(280);
+    m_inspectorDock->setWidget(m_inspectorStack);
+    addDockWidget(Qt::RightDockWidgetArea, m_inspectorDock);
+}
+
+void MainWindow::refreshInspector()
+{
+    if (!m_inspectorStack) {
+        return;
+    }
+
+    if (!m_documentController->hasSelectedOverlay()) {
+        m_inspectorStack->setCurrentWidget(m_inspectorEmptyPage);
+        return;
+    }
+
+    if (m_documentController->hasSelectedTextEditAnnotation()) {
+        const QSignalBlocker textBlocker(m_inspectorTextEdit);
+        const QSignalBlocker fontBlocker(m_inspectorFontFamilyBox);
+        const QSignalBlocker sizeBlocker(m_inspectorFontSizeSpin);
+        m_inspectorTextEdit->setPlainText(m_documentController->selectedTextEditText());
+        const PdfTextStyle style = m_documentController->selectedTextEditStyle();
+        const QString fontFamily = normalizedPdfFontFamily(style.fontFamily);
+        const int fontIndex = m_inspectorFontFamilyBox->findText(fontFamily);
+        m_inspectorFontFamilyBox->setCurrentIndex(fontIndex >= 0 ? fontIndex : 0);
+        m_inspectorFontSizeSpin->setValue(qRound(style.fontSize > 0.0 ? style.fontSize : 12.0));
+        m_inspectorTextColor = style.textColor.isValid() ? style.textColor : QColor(Qt::black);
+        m_inspectorBackgroundColor = m_documentController->selectedTextEditBackgroundColor().isValid()
+            ? m_documentController->selectedTextEditBackgroundColor()
+            : QColor(255, 255, 255, 230);
+        updateColorButton(m_inspectorTextColorButton, m_inspectorTextColor);
+        updateColorButton(m_inspectorBackgroundColorButton, m_inspectorBackgroundColor);
+        m_inspectorStack->setCurrentWidget(m_inspectorTextPage);
+        return;
+    }
+
+    if (m_documentController->hasSelectedNoteAnnotation()) {
+        const QSignalBlocker noteBlocker(m_inspectorNoteEdit);
+        m_inspectorNoteEdit->setPlainText(m_documentController->selectedNoteText());
+        m_inspectorNoteColor = m_documentController->selectedAnnotationColor().isValid()
+            ? m_documentController->selectedAnnotationColor()
+            : QColor(255, 193, 7, 210);
+        updateColorButton(m_inspectorNoteColorButton, m_inspectorNoteColor);
+        m_inspectorStack->setCurrentWidget(m_inspectorNotePage);
+        return;
+    }
+
+    if (m_documentController->hasSelectedSignatureAnnotation()) {
+        m_inspectorStack->setCurrentWidget(m_inspectorSignaturePage);
+        return;
+    }
+
+    m_inspectorStack->setCurrentWidget(m_inspectorEmptyPage);
+}
+
+void MainWindow::applyInspectorChanges()
+{
+    if (m_documentController->hasSelectedTextEditAnnotation()) {
+        PdfTextStyle style;
+        style.fontFamily = normalizedPdfFontFamily(m_inspectorFontFamilyBox->currentText());
+        style.fontSize = m_inspectorFontSizeSpin->value();
+        style.textColor = m_inspectorTextColor.isValid() ? m_inspectorTextColor : QColor(Qt::black);
+        m_documentController->updateSelectedTextEdit(
+            m_inspectorTextEdit->toPlainText(),
+            style,
+            m_inspectorBackgroundColor.isValid() ? m_inspectorBackgroundColor : QColor(255, 255, 255, 230));
+        return;
+    }
+
+    if (m_documentController->hasSelectedNoteAnnotation()) {
+        m_documentController->updateSelectedNoteText(m_inspectorNoteEdit->toPlainText());
+        m_documentController->setSelectedAnnotationColor(
+            m_inspectorNoteColor.isValid() ? m_inspectorNoteColor : QColor(255, 193, 7, 210));
+    }
 }
 
 void MainWindow::createStatusBar()

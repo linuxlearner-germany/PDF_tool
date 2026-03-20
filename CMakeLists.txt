@@ -21,7 +21,7 @@ if(EXISTS "${PDF_TOOL_LOCAL_PKGCONFIG_DIR}")
     endif()
 endif()
 
-find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets PrintSupport)
+find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets PrintSupport Test)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(POPPLER_QT6 REQUIRED IMPORTED_TARGET poppler-qt6)
 pkg_check_modules(JPEG_LIB REQUIRED IMPORTED_TARGET libjpeg)
@@ -109,3 +109,42 @@ target_compile_options(PDFTool
     PRIVATE
         $<$<CXX_COMPILER_ID:GNU,Clang>:-Wall -Wextra -Wpedantic>
 )
+
+enable_testing()
+
+qt_add_executable(AnnotationModelTests
+    tests/AnnotationModelTests.cpp
+    src/document/AnnotationModel.cpp
+)
+
+target_include_directories(AnnotationModelTests
+    PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
+)
+
+target_link_libraries(AnnotationModelTests
+    PRIVATE
+        Qt6::Core
+        Qt6::Gui
+        Qt6::Test
+)
+
+qt_add_executable(FormFieldModelTests
+    tests/FormFieldModelTests.cpp
+    src/document/FormFieldModel.cpp
+)
+
+target_include_directories(FormFieldModelTests
+    PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
+)
+
+target_link_libraries(FormFieldModelTests
+    PRIVATE
+        Qt6::Core
+        Qt6::Gui
+        Qt6::Test
+)
+
+add_test(NAME AnnotationModelTests COMMAND AnnotationModelTests)
+add_test(NAME FormFieldModelTests COMMAND FormFieldModelTests)

@@ -46,6 +46,7 @@ signals:
     void zoomOutRequested();
     void pointActivated(const QPointF &imagePoint);
     void signatureMoveRequested(const QPointF &imageDelta);
+    void signatureResizeRequested(const QPointF &imageDelta);
     void textEditResizeRequested(const QPointF &imageDelta);
     void contextMenuRequested(const QPointF &imagePoint, const QPoint &globalPos);
     void formTextEdited(const QString &fieldId, const QString &text);
@@ -60,8 +61,12 @@ protected:
     void wheelEvent(QWheelEvent *event) override;
 
 private:
+    void redrawAnnotationOverlays();
+    QRectF previewRectForSelectedOverlay(const PdfAnnotationOverlay &overlay, const QRectF &rect) const;
+    QRectF selectedSignatureResizeHandleRect() const;
     QRectF selectedTextResizeHandleRect() const;
     QPointF clampToPage(const QPointF &scenePoint) const;
+    bool isSelectedSignatureResizeHandleHit(const QPointF &scenePoint) const;
     bool isSelectedTextResizeHandleHit(const QPointF &scenePoint) const;
     bool isSelectedMovableAnnotationHit(const QPointF &scenePoint) const;
     QRectF currentSelectionRect() const;
@@ -92,6 +97,7 @@ private:
     QPointF m_dragStart;
     QPointF m_dragCurrent;
     bool m_isSelecting {false};
+    bool m_isResizingSignature {false};
     bool m_isResizingTextEdit {false};
     bool m_isDraggingSignature {false};
     QVector<PdfAnnotationOverlay> m_annotationOverlays;

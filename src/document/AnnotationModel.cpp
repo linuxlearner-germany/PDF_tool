@@ -253,6 +253,43 @@ bool AnnotationModel::resizeSelectedFreeText(const QSizeF &pageDelta, const QSiz
     return false;
 }
 
+bool AnnotationModel::resizeSelectedSignature(const QSizeF &pageDelta, const QSizeF &minimumSize)
+{
+    for (PdfAnnotation &annotation : m_annotations) {
+        if (!annotation.selected) {
+            continue;
+        }
+        if (annotation.kind != PdfAnnotationKind::Signature || annotation.pageRects.isEmpty()) {
+            return false;
+        }
+
+        QRectF &rect = annotation.pageRects[0];
+        const QSizeF currentSize = rect.size();
+        const double currentWidth = qMax(1.0, currentSize.width());
+        const double currentHeight = qMax(1.0, currentSize.height());
+        const double aspectRatio = currentWidth / currentHeight;
+
+        const double requestedWidth = qMax(minimumSize.width(), currentWidth + pageDelta.width());
+        const double requestedHeight = qMax(minimumSize.height(), currentHeight + pageDelta.height());
+
+        QSizeF newSize;
+        const double normalizedDeltaX = std::abs(pageDelta.width()) / currentWidth;
+        const double normalizedDeltaY = std::abs(pageDelta.height()) / currentHeight;
+        if (normalizedDeltaX >= normalizedDeltaY) {
+            newSize.setWidth(requestedWidth);
+            newSize.setHeight(qMax(minimumSize.height(), requestedWidth / aspectRatio));
+        } else {
+            newSize.setHeight(requestedHeight);
+            newSize.setWidth(qMax(minimumSize.width(), requestedHeight * aspectRatio));
+        }
+
+        rect.setSize(newSize);
+        return true;
+    }
+
+    return false;
+}
+
 bool AnnotationModel::remapPages(const QVector<int> &newOrder)
 {
     QVector<PdfAnnotation> remappedAnnotations;

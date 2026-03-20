@@ -16,8 +16,10 @@ class QLabel;
 class QLineEdit;
 class QListView;
 class QDockWidget;
+class QComboBox;
 class QPushButton;
 class QSpinBox;
+class QStackedWidget;
 class QTextEdit;
 class QTabWidget;
 class QToolBar;
@@ -59,6 +61,7 @@ private slots:
     void requestFreeTextAnnotation();
     void replaceSelectedText();
     void editSelectedTextAnnotation();
+    void editFormFieldTextStyle();
     void changeSelectedAnnotationColor();
     void setDarkMode(bool enabled);
     void updateWindowTitle();
@@ -68,6 +71,7 @@ private slots:
     void updateSelectionDependentActions(bool hasSelection);
     void updateOverlaySelectionActions(bool hasSelection);
     void updateSearchState(bool hasResults, int currentHit, int totalHits, const QString &statusText);
+    void applyInspectorChanges();
     void jumpToPage(int pageNumber);
     void moveCurrentPageLeft();
     void moveCurrentPageRight();
@@ -90,6 +94,7 @@ private:
     void createToolbar();
     void createCentralLayout();
     void createStatusBar();
+    void createInspectorDock();
     void applyWindowStyle();
     void applyTheme(ThemeMode mode);
     ThemeMode loadThemeSetting() const;
@@ -98,6 +103,7 @@ private:
     QLabel *createStatusPill(const QString &text, const QString &objectName) const;
     bool applyPageOrderChange(const QVector<int> &newOrder, int reopenedPageIndex, const QString &successMessage);
     void refreshNavigationPanels();
+    void refreshInspector();
     void populateOutlineTree(const QVector<PdfOutlineEntry> &entries, QTreeWidgetItem *parentItem = nullptr);
     void syncThumbnailSelection(int pageIndex);
     bool promptForCryptographicSignature(
@@ -130,12 +136,28 @@ private:
     QLabel *m_pageStatusLabel {nullptr};
     QLabel *m_searchStatusLabel {nullptr};
     QDockWidget *m_navigationDock {nullptr};
+    QDockWidget *m_inspectorDock {nullptr};
+    QStackedWidget *m_inspectorStack {nullptr};
+    QWidget *m_inspectorEmptyPage {nullptr};
+    QWidget *m_inspectorTextPage {nullptr};
+    QWidget *m_inspectorNotePage {nullptr};
+    QWidget *m_inspectorSignaturePage {nullptr};
+    QTextEdit *m_inspectorTextEdit {nullptr};
+    QComboBox *m_inspectorFontFamilyBox {nullptr};
+    QSpinBox *m_inspectorFontSizeSpin {nullptr};
+    QPushButton *m_inspectorTextColorButton {nullptr};
+    QPushButton *m_inspectorBackgroundColorButton {nullptr};
+    QTextEdit *m_inspectorNoteEdit {nullptr};
+    QPushButton *m_inspectorNoteColorButton {nullptr};
     QToolBar *m_mainToolBar {nullptr};
     QToolBar *m_toolsToolBar {nullptr};
     std::unique_ptr<PdfDocumentController> m_documentController;
     std::unique_ptr<QPdfOperations> m_pdfOperations;
     PageThumbnailListModel *m_pageThumbnailModel {nullptr};
     QPointF m_lastContextImagePoint;
+    QColor m_inspectorTextColor;
+    QColor m_inspectorBackgroundColor;
+    QColor m_inspectorNoteColor;
 
     QAction *m_openAction {nullptr};
     QAction *m_saveAction {nullptr};
@@ -164,6 +186,7 @@ private:
     QAction *m_addTextAction {nullptr};
     QAction *m_replaceSelectedTextAction {nullptr};
     QAction *m_editTextAction {nullptr};
+    QAction *m_editFormFieldTextStyleAction {nullptr};
     QAction *m_changeAnnotationColorAction {nullptr};
     QAction *m_redactSelectionAction {nullptr};
     QAction *m_findAction {nullptr};

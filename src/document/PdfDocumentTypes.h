@@ -88,6 +88,7 @@ struct PdfFormField
     QString name;
     QString label;
     QString textValue;
+    PdfTextStyle textStyle;
     bool checked {false};
     bool readOnly {false};
 };
@@ -99,6 +100,7 @@ struct PdfFormFieldOverlay
     QRectF imageRect;
     QString label;
     QString textValue;
+    PdfTextStyle textStyle;
     bool checked {false};
     bool readOnly {false};
 };

@@ -31,7 +31,7 @@ constexpr double kMinZoom = 0.5;
 constexpr double kMaxZoom = 4.0;
 constexpr double kZoomStep = 0.25;
 constexpr double kRedactionExportScale = 2.0;
-constexpr int kSidecarVersion = 2;
+constexpr int kSidecarVersion = 3;
 
 QString normalizedPdfFontFamily(const QString &fontFamily)
 {
@@ -102,6 +102,9 @@ bool formFieldsEqual(const QVector<PdfFormField> &lhs, const QVector<PdfFormFiel
         if (left.id != right.id
             || left.kind != right.kind
             || left.textValue != right.textValue
+            || left.textStyle.textColor != right.textStyle.textColor
+            || left.textStyle.fontFamily != right.textStyle.fontFamily
+            || !qFuzzyCompare(left.textStyle.fontSize + 1.0, right.textStyle.fontSize + 1.0)
             || left.checked != right.checked) {
             return false;
         }
@@ -514,10 +517,10 @@ bool PdfDocumentController::exportEditedPdf(const QString &outputFile, bool excl
 
                 if (field.kind == PdfFormFieldKind::Text) {
                     QFont font = imagePainter.font();
-                    const double pointSize = std::clamp(imageRect.height() * 0.16, 8.0, 18.0);
-                    font.setPointSizeF(pointSize);
+                    font.setFamily(field.textStyle.fontFamily);
+                    font.setPixelSize(qMax(1, qRound(field.textStyle.fontSize * scaleY)));
                     imagePainter.setFont(font);
-                    imagePainter.setPen(Qt::black);
+                    imagePainter.setPen(field.textStyle.textColor.isValid() ? field.textStyle.textColor : Qt::black);
                     imagePainter.drawText(imageRect.adjusted(4.0, 2.0, -4.0, -2.0),
                                           Qt::AlignLeft | Qt::AlignVCenter | Qt::TextWordWrap,
                                           field.textValue);
@@ -672,6 +675,16 @@ bool PdfDocumentController::hasSelectedOverlay() const
     return m_annotationModel.hasSelectedAnnotation() || m_redactionModel.hasSelectedRedaction();
 }
 
+PdfAnnotationKind PdfDocumentController::selectedAnnotationKind() const
+{
+    return m_annotationModel.selectedAnnotationKind();
+}
+
+QColor PdfDocumentController::selectedAnnotationColor() const
+{
+    return m_annotationModel.selectedAnnotationColor();
+}
+
 bool PdfDocumentController::hasRedactions() const
 {
     return m_redactionModel.hasRedactions();
@@ -707,6 +720,38 @@ bool PdfDocumentController::hasSelectedMovableAnnotation() const
 
     const PdfAnnotationKind kind = m_annotationModel.selectedAnnotationKind();
     return kind == PdfAnnotationKind::Signature || kind == PdfAnnotationKind::FreeText;
+}
+
+bool PdfDocumentController::textFormFieldStyleAt(
+    const QPointF &imagePoint,
+    QString &fieldId,
+    QString &label,
+    PdfTextStyle &style) const
+{
+    if (!hasDocument()) {
+        return false;
+    }
+
+    const QString id = m_formFieldModel.fieldIdAt(m_currentPageIndex, imagePointToPagePoint(imagePoint));
+    if (id.isEmpty()) {
+        return false;
+    }
+
+    PdfTextStyle fieldStyle;
+    if (!m_formFieldModel.textFieldStyle(id, fieldStyle)) {
+        return false;
+    }
+
+    for (const PdfFormField &field : m_formFieldModel.fieldsForPage(m_currentPageIndex)) {
+        if (field.id == id && field.kind == PdfFormFieldKind::Text) {
+            fieldId = id;
+            label = field.label;
+            style = fieldStyle;
+            return true;
+        }
+    }
+
+    return false;
 }
 
 QString PdfDocumentController::selectedTextEditText() const
@@ -1057,6 +1102,27 @@ void PdfDocumentController::moveSelectedSignatureBy(const QPointF &imageDelta)
             : QStringLiteral("Unterschrift verschoben."));
 }
 
+void PdfDocumentController::resizeSelectedSignatureBy(const QPointF &imageDelta)
+{
+    if (!hasSelectedSignatureAnnotation() || m_currentPageImage.isNull() || m_pageSizePoints.isEmpty()) {
+        return;
+    }
+
+    const QSizeF pageDelta(
+        imageDelta.x() * m_pageSizePoints.width() / qMax(1, m_currentPageImage.width()),
+        imageDelta.y() * m_pageSizePoints.height() / qMax(1, m_currentPageImage.height()));
+
+    if (!m_annotationModel.resizeSelectedSignature(pageDelta)) {
+        return;
+    }
+
+    saveSidecarState();
+    recordHistorySnapshot();
+    emitOverlayState();
+    updateOverlaySelectionSignal();
+    emit statusMessageChanged(QStringLiteral("Unterschriftgröße geändert."));
+}
+
 void PdfDocumentController::resizeSelectedTextEditBy(const QPointF &imageDelta)
 {
     if (!hasSelectedTextEditAnnotation() || m_currentPageImage.isNull() || m_pageSizePoints.isEmpty()) {
@@ -1363,6 +1429,18 @@ void PdfDocumentController::setFormFieldText(const QString &fieldId, const QStri
     recordHistorySnapshot();
     emitOverlayState();
     emit statusMessageChanged(QStringLiteral("Formularwert aktualisiert."));
+}
+
+void PdfDocumentController::setFormFieldTextStyle(const QString &fieldId, const PdfTextStyle &style)
+{
+    if (!m_formFieldModel.setTextStyle(fieldId, style)) {
+        return;
+    }
+
+    saveSidecarState();
+    recordHistorySnapshot();
+    emitOverlayState();
+    emit statusMessageChanged(QStringLiteral("Formularschrift aktualisiert."));
 }
 
 void PdfDocumentController::setFormFieldChecked(const QString &fieldId, bool checked)
@@ -1686,6 +1764,7 @@ void PdfDocumentController::emitOverlayState()
         overlay.imageRect = pageRectToImageRect(field.pageRect);
         overlay.label = field.label;
         overlay.textValue = field.textValue;
+        overlay.textStyle = field.textStyle;
         overlay.checked = field.checked;
         overlay.readOnly = field.readOnly;
         formFieldOverlays.append(overlay);

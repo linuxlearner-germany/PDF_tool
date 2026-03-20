@@ -31,6 +31,7 @@ public:
     bool setFreeTextStyle(const QString &annotationId, const PdfTextStyle &style);
     bool translateSelected(const QPointF &pageDelta);
     bool resizeSelectedFreeText(const QSizeF &pageDelta, const QSizeF &minimumSize = QSizeF(48.0, 24.0));
+    bool resizeSelectedSignature(const QSizeF &pageDelta, const QSizeF &minimumSize = QSizeF(32.0, 16.0));
     bool remapPages(const QVector<int> &newOrder);
     void clearSelection();
     bool selectAt(int pageIndex, const QPointF &pagePoint);

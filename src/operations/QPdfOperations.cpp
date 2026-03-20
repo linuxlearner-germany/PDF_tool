@@ -82,6 +82,19 @@ QString defaultAppearanceString(const PdfAnnotation &annotation)
         .arg(QString::number(fontSize, 'f', 1));
 }
 
+QString defaultAppearanceString(const PdfTextStyle &style)
+{
+    const QColor textColor = style.textColor.isValid() ? style.textColor.toRgb() : QColor(Qt::black);
+    const double fontSize = style.fontSize > 0.0 ? style.fontSize : 12.0;
+    const QString fontAlias = standardPdfFontAlias(style.fontFamily);
+    return QStringLiteral("%1 %2 %3 rg %4 %5 Tf")
+        .arg(QString::number(textColor.redF(), 'f', 3))
+        .arg(QString::number(textColor.greenF(), 'f', 3))
+        .arg(QString::number(textColor.blueF(), 'f', 3))
+        .arg(fontAlias)
+        .arg(QString::number(fontSize, 'f', 1));
+}
+
 QString defaultStyleString(const PdfAnnotation &annotation)
 {
     const QColor textColor = annotation.textStyle.textColor.isValid() ? annotation.textStyle.textColor.toRgb() : QColor(Qt::black);
@@ -302,7 +315,10 @@ bool applyFormValues(
 
                 if (fieldState.kind == PdfFormFieldKind::Text && field.isText()) {
                     field.setV(fieldState.textValue.toUtf8().toStdString(), false);
+                    const std::string defaultAppearance = toUtf8(defaultAppearanceString(fieldState.textStyle));
+                    field.getObjectHandle().replaceKey("/DA", QPDFObjectHandle::newString(defaultAppearance));
                     QPDFAnnotationObjectHelper mutableAnnotation(annotation.getObjectHandle());
+                    mutableAnnotation.getObjectHandle().replaceKey("/DA", QPDFObjectHandle::newString(defaultAppearance));
                     field.generateAppearance(mutableAnnotation);
                     updated = true;
                     break;

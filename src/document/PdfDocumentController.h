@@ -63,6 +63,8 @@ public:
     bool exportEditedPdf(const QString &outputFile, bool excludeSelectedSignatureAnnotation = false);
     bool exportRedactedPdf(const QString &outputFile);
     bool hasSelectedOverlay() const;
+    PdfAnnotationKind selectedAnnotationKind() const;
+    QColor selectedAnnotationColor() const;
     bool hasRedactions() const;
     bool hasTextEditAnnotations() const;
     bool hasSelectedNoteAnnotation() const;
@@ -74,6 +76,7 @@ public:
     bool hasSelectedSignatureAnnotation() const;
     bool selectedSignatureAnnotationData(int &pageIndex, QRectF &pageRect, QByteArray &imageData) const;
     bool hasSelectedMovableAnnotation() const;
+    bool textFormFieldStyleAt(const QPointF &imagePoint, QString &fieldId, QString &label, PdfTextStyle &style) const;
     bool canUndo() const;
     bool canRedo() const;
     QPixmap thumbnailForPage(int pageIndex, const QSize &targetSize);
@@ -108,6 +111,7 @@ public slots:
     void addSignatureFromImageAt(const QPointF &imagePoint, const QImage &signatureImage);
     void addSignatureFromImageToSelection(const QImage &signatureImage);
     void moveSelectedSignatureBy(const QPointF &imageDelta);
+    void resizeSelectedSignatureBy(const QPointF &imageDelta);
     void resizeSelectedTextEditBy(const QPointF &imageDelta);
     bool remapPageOrder(const QVector<int> &newOrder);
     void selectOverlayAt(const QPointF &imagePoint);
@@ -128,6 +132,7 @@ public slots:
     void clearSearch();
 
     void setFormFieldText(const QString &fieldId, const QString &text);
+    void setFormFieldTextStyle(const QString &fieldId, const PdfTextStyle &style);
     void setFormFieldChecked(const QString &fieldId, bool checked);
 
     void addRedactionFromSelection();

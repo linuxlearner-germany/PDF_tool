@@ -4,6 +4,31 @@
 
 #include <QJsonObject>
 
+namespace
+{
+PdfTextStyle normalizedTextStyle(const PdfTextStyle &style)
+{
+    PdfTextStyle normalized = style;
+    if (!normalized.textColor.isValid()) {
+        normalized.textColor = Qt::black;
+    }
+
+    const QString family = normalized.fontFamily.trimmed();
+    if (family.contains(QStringLiteral("courier"), Qt::CaseInsensitive)) {
+        normalized.fontFamily = QStringLiteral("Courier");
+    } else if (family.contains(QStringLiteral("times"), Qt::CaseInsensitive)) {
+        normalized.fontFamily = QStringLiteral("Times New Roman");
+    } else {
+        normalized.fontFamily = QStringLiteral("Helvetica");
+    }
+
+    if (normalized.fontSize <= 0.0) {
+        normalized.fontSize = 12.0;
+    }
+    return normalized;
+}
+}
+
 void FormFieldModel::clear()
 {
     m_fields.clear();
@@ -12,6 +37,9 @@ void FormFieldModel::clear()
 void FormFieldModel::setFields(const QVector<PdfFormField> &fields)
 {
     m_fields = fields;
+    for (PdfFormField &field : m_fields) {
+        field.textStyle = normalizedTextStyle(field.textStyle);
+    }
 }
 
 QVector<PdfFormField> FormFieldModel::fields() const
@@ -41,11 +69,33 @@ bool FormFieldModel::setTextValue(const QString &fieldId, const QString &text)
     return false;
 }
 
+bool FormFieldModel::setTextStyle(const QString &fieldId, const PdfTextStyle &style)
+{
+    if (PdfFormField *field = findMutable(fieldId)) {
+        if (field->kind == PdfFormFieldKind::Text && !field->readOnly) {
+            field->textStyle = normalizedTextStyle(style);
+            return true;
+        }
+    }
+    return false;
+}
+
 bool FormFieldModel::setChecked(const QString &fieldId, bool checked)
 {
     if (PdfFormField *field = findMutable(fieldId)) {
         if (field->kind == PdfFormFieldKind::CheckBox && !field->readOnly) {
             field->checked = checked;
+            return true;
+        }
+    }
+    return false;
+}
+
+bool FormFieldModel::textFieldStyle(const QString &fieldId, PdfTextStyle &style) const
+{
+    for (const PdfFormField &field : m_fields) {
+        if (field.id == fieldId && field.kind == PdfFormFieldKind::Text) {
+            style = normalizedTextStyle(field.textStyle);
             return true;
         }
     }
@@ -102,6 +152,9 @@ QJsonArray FormFieldModel::toJson() const
         fieldObject.insert(QStringLiteral("id"), field.id);
         fieldObject.insert(QStringLiteral("kind"), static_cast<int>(field.kind));
         fieldObject.insert(QStringLiteral("textValue"), field.textValue);
+        fieldObject.insert(QStringLiteral("textColor"), field.textStyle.textColor.name(QColor::HexArgb));
+        fieldObject.insert(QStringLiteral("fontFamily"), field.textStyle.fontFamily);
+        fieldObject.insert(QStringLiteral("fontSize"), field.textStyle.fontSize);
         fieldObject.insert(QStringLiteral("checked"), field.checked);
         valuesArray.append(fieldObject);
     }
@@ -120,6 +173,11 @@ bool FormFieldModel::fromJson(const QJsonArray &valuesArray)
         const QString fieldId = fieldObject.value(QStringLiteral("id")).toString();
         if (PdfFormField *field = findMutable(fieldId)) {
             field->textValue = fieldObject.value(QStringLiteral("textValue")).toString(field->textValue);
+            field->textStyle.textColor = QColor(fieldObject.value(QStringLiteral("textColor")).toString(
+                field->textStyle.textColor.name(QColor::HexArgb)));
+            field->textStyle.fontFamily = fieldObject.value(QStringLiteral("fontFamily")).toString(field->textStyle.fontFamily);
+            field->textStyle.fontSize = fieldObject.value(QStringLiteral("fontSize")).toDouble(field->textStyle.fontSize);
+            field->textStyle = normalizedTextStyle(field->textStyle);
             field->checked = fieldObject.value(QStringLiteral("checked")).toBool(field->checked);
         }
     }
