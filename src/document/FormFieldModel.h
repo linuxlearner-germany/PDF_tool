@@ -13,6 +13,7 @@ public:
     void clear();
     void setFields(const QVector<PdfFormField> &fields);
 
+    QVector<PdfFormField> fields() const;
     QVector<PdfFormField> fieldsForPage(int pageIndex) const;
     bool setTextValue(const QString &fieldId, const QString &text);
     bool setChecked(const QString &fieldId, bool checked);

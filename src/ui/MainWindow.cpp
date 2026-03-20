@@ -10,8 +10,8 @@
 #include <QDialogButtonBox>
 #include <QDockWidget>
 #include <QFileDialog>
-#include <QFileInfo>
 #include <QFile>
+#include <QFileInfo>
 #include <QFormLayout>
 #include <QGuiApplication>
 #include <QInputDialog>
@@ -31,6 +31,7 @@
 #include <QStyle>
 #include <QTabWidget>
 #include <QTextEdit>
+#include <QTemporaryFile>
 #include <QToolBar>
 #include <QTreeWidget>
 #include <QTreeWidgetItem>
@@ -39,6 +40,10 @@
 
 #include <QtPrintSupport/QPrintDialog>
 #include <QtPrintSupport/QPrinter>
+
+#include <poppler-converter.h>
+#include <poppler-form.h>
+#include <poppler-qt6.h>
 
 #include "document/PdfDocumentController.h"
 #include "document/PdfDocumentTypes.h"
@@ -110,6 +115,11 @@ PasswordDialogResult promptForPasswords(
         }
     }
     return result;
+}
+
+bool cryptographicSigningAvailable()
+{
+    return !Poppler::availableCryptoSignBackends().isEmpty();
 }
 }
 
@@ -457,6 +467,80 @@ void MainWindow::exportEditedPdf()
     }
 }
 
+void MainWindow::exportSignedPdf()
+{
+    if (!m_documentController->hasDocument()) {
+        return;
+    }
+
+    if (!cryptographicSigningAvailable()) {
+        showError(QStringLiteral("Kein kryptografisches Signatur-Backend in Poppler verfügbar."));
+        return;
+    }
+
+    int pageIndex = -1;
+    QRectF pageRect;
+    QByteArray signatureImageData;
+    if (!m_documentController->selectedSignatureAnnotationData(pageIndex, pageRect, signatureImageData)) {
+        showError(QStringLiteral("Bitte zuerst eine eingefügte Unterschrift auswählen."));
+        return;
+    }
+
+    QString certNickname;
+    QString certPassword;
+    QString reason;
+    QString location;
+    if (!promptForCryptographicSignature(certNickname, certPassword, reason, location)) {
+        return;
+    }
+
+    if (certNickname.trimmed().isEmpty()) {
+        showError(QStringLiteral("Zertifikat-Nickname darf nicht leer sein."));
+        return;
+    }
+
+    const QFileInfo inputInfo(m_documentController->documentPath());
+    const QString outputFile = QFileDialog::getSaveFileName(
+        this,
+        QStringLiteral("Signiertes PDF speichern"),
+        inputInfo.absolutePath() + QLatin1Char('/') + inputInfo.completeBaseName() + QStringLiteral("_signed.pdf"),
+        QStringLiteral("PDF Dateien (*.pdf)")
+    );
+
+    if (outputFile.isEmpty()) {
+        return;
+    }
+
+    QTemporaryFile unsignedPdfFile(QDir::tempPath() + QStringLiteral("/pdftool-sign-XXXXXX.pdf"));
+    unsignedPdfFile.setAutoRemove(true);
+    if (!unsignedPdfFile.open()) {
+        showError(QStringLiteral("Temporäre Datei für die Signatur konnte nicht angelegt werden."));
+        return;
+    }
+    const QString unsignedPdfPath = unsignedPdfFile.fileName();
+    unsignedPdfFile.close();
+
+    if (!m_documentController->exportEditedPdf(unsignedPdfPath, true)) {
+        showError(m_documentController->lastError());
+        return;
+    }
+
+    if (!signPdfWithPoppler(
+            unsignedPdfPath,
+            outputFile,
+            pageIndex,
+            pageRect,
+            signatureImageData,
+            certNickname.trimmed(),
+            certPassword,
+            reason.trimmed(),
+            location.trimmed())) {
+        return;
+    }
+
+    statusBar()->showMessage(QStringLiteral("PDF erfolgreich kryptografisch signiert."), 4000);
+}
+
 void MainWindow::printDocument()
 {
     if (!m_documentController->hasDocument()) {
@@ -723,6 +807,10 @@ void MainWindow::updateUiState(bool hasDocument)
     m_exportEncryptedPdfAction->setEnabled(hasDocument && m_pdfOperations->isAvailable());
     m_exportEditedPdfAction->setEnabled(hasDocument);
     m_exportRedactedPdfAction->setEnabled(hasDocument && m_documentController->hasRedactions());
+    m_exportSignedPdfAction->setEnabled(
+        hasDocument
+        && cryptographicSigningAvailable()
+        && m_documentController->hasSelectedSignatureAnnotation());
     m_printAction->setEnabled(hasDocument);
     m_showMetadataAction->setEnabled(hasDocument);
     m_zoomInAction->setEnabled(hasDocument);
@@ -799,6 +887,10 @@ void MainWindow::updateOverlaySelectionActions(bool hasSelection)
     m_editTextAction->setEnabled(hasSelection && m_documentController->hasSelectedTextEditAnnotation());
     m_exportEditedPdfAction->setEnabled(m_documentController->hasDocument());
     m_exportRedactedPdfAction->setEnabled(m_documentController->hasDocument() && m_documentController->hasRedactions());
+    m_exportSignedPdfAction->setEnabled(
+        m_documentController->hasDocument()
+        && cryptographicSigningAvailable()
+        && m_documentController->hasSelectedSignatureAnnotation());
     if (m_modeStatusLabel && hasSelection) {
         m_modeStatusLabel->setText(QStringLiteral("Objekt ausgewählt"));
     }
@@ -1389,6 +1481,9 @@ void MainWindow::createActions()
     m_exportRedactedPdfAction = new QAction(QStringLiteral("Geschwärztes PDF exportieren..."), this);
     connect(m_exportRedactedPdfAction, &QAction::triggered, this, &MainWindow::exportRedactedPdf);
 
+    m_exportSignedPdfAction = new QAction(QStringLiteral("Kryptografisch signiertes PDF exportieren..."), this);
+    connect(m_exportSignedPdfAction, &QAction::triggered, this, &MainWindow::exportSignedPdf);
+
     m_showMetadataAction = new QAction(QStringLiteral("Metadaten"), this);
     m_showMetadataAction->setIcon(loadToolbarIcon(QStringLiteral("info")));
     m_showMetadataAction->setToolTip(QStringLiteral("Dokument-Metadaten anzeigen"));
@@ -1544,6 +1639,7 @@ void MainWindow::createMenus()
     fileMenu->addAction(m_exportEncryptedPdfAction);
     fileMenu->addAction(m_exportEditedPdfAction);
     fileMenu->addAction(m_exportRedactedPdfAction);
+    fileMenu->addAction(m_exportSignedPdfAction);
     fileMenu->addAction(m_showMetadataAction);
     fileMenu->addSeparator();
     fileMenu->addAction(m_exitAction);
@@ -1662,6 +1758,113 @@ void MainWindow::createToolbar()
     m_toolsToolBar->addAction(m_exportEditedPdfAction);
     m_toolsToolBar->addAction(m_exportRedactedPdfAction);
     m_toolsToolBar->addAction(m_exportEncryptedPdfAction);
+    m_toolsToolBar->addAction(m_exportSignedPdfAction);
+}
+
+bool MainWindow::promptForCryptographicSignature(
+    QString &certNickname,
+    QString &password,
+    QString &reason,
+    QString &location) const
+{
+    QDialog dialog(const_cast<MainWindow *>(this));
+    dialog.setWindowTitle(QStringLiteral("PDF kryptografisch signieren"));
+
+    auto *layout = new QVBoxLayout(&dialog);
+    layout->addWidget(new QLabel(
+        QStringLiteral("Bitte den Zertifikat-Nickname des aktiven Signatur-Backends angeben."),
+        &dialog));
+
+    auto *formLayout = new QFormLayout();
+    layout->addLayout(formLayout);
+
+    auto *nicknameEdit = new QLineEdit(&dialog);
+    auto *passwordEdit = new QLineEdit(&dialog);
+    auto *reasonEdit = new QLineEdit(&dialog);
+    auto *locationEdit = new QLineEdit(&dialog);
+    passwordEdit->setEchoMode(QLineEdit::Password);
+
+    formLayout->addRow(QStringLiteral("Zertifikat:"), nicknameEdit);
+    formLayout->addRow(QStringLiteral("Passphrase:"), passwordEdit);
+    formLayout->addRow(QStringLiteral("Grund:"), reasonEdit);
+    formLayout->addRow(QStringLiteral("Ort:"), locationEdit);
+
+    auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
+    connect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
+    connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
+    layout->addWidget(buttons);
+
+    if (dialog.exec() != QDialog::Accepted) {
+        return false;
+    }
+
+    certNickname = nicknameEdit->text();
+    password = passwordEdit->text();
+    reason = reasonEdit->text();
+    location = locationEdit->text();
+    return true;
+}
+
+bool MainWindow::signPdfWithPoppler(
+    const QString &inputFile,
+    const QString &outputFile,
+    int pageIndex,
+    const QRectF &pageRect,
+    const QByteArray &signatureImageData,
+    const QString &certNickname,
+    const QString &password,
+    const QString &reason,
+    const QString &location)
+{
+    QTemporaryFile signatureImageFile(QDir::tempPath() + QStringLiteral("/pdftool-signature-XXXXXX.png"));
+    signatureImageFile.setAutoRemove(true);
+    if (!signatureImageFile.open()) {
+        showError(QStringLiteral("Temporäre Signaturdatei konnte nicht angelegt werden."));
+        return false;
+    }
+    if (signatureImageFile.write(signatureImageData) != signatureImageData.size()) {
+        showError(QStringLiteral("Temporäres Signaturbild konnte nicht geschrieben werden."));
+        return false;
+    }
+    signatureImageFile.flush();
+
+    std::unique_ptr<Poppler::Document> document(
+        Poppler::Document::load(
+            inputFile,
+            m_documentController->currentOwnerPassword(),
+            m_documentController->currentUserPassword()));
+    if (!document) {
+        showError(QStringLiteral("Temporäres PDF konnte für die Signatur nicht geladen werden."));
+        return false;
+    }
+
+    std::unique_ptr<Poppler::PDFConverter> converter = document->pdfConverter();
+    if (!converter) {
+        showError(QStringLiteral("Poppler-PDF-Konverter ist nicht verfügbar."));
+        return false;
+    }
+
+    converter->setOutputFileName(outputFile);
+    converter->setPDFOptions(Poppler::PDFConverter::WithChanges);
+
+    Poppler::PDFConverter::NewSignatureData signatureData;
+    signatureData.setCertNickname(certNickname);
+    signatureData.setPassword(password);
+    signatureData.setPage(pageIndex);
+    signatureData.setBoundingRectangle(pageRect);
+    signatureData.setSignatureText(certNickname);
+    signatureData.setReason(reason);
+    signatureData.setLocation(location);
+    signatureData.setImagePath(signatureImageFile.fileName());
+    signatureData.setDocumentOwnerPassword(m_documentController->currentOwnerPassword());
+    signatureData.setDocumentUserPassword(m_documentController->currentUserPassword());
+
+    if (!converter->sign(signatureData)) {
+        showError(QStringLiteral("PDF konnte nicht kryptografisch signiert werden."));
+        return false;
+    }
+
+    return true;
 }
 
 void MainWindow::createCentralLayout()

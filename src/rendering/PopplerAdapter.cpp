@@ -3,8 +3,10 @@
 #include <algorithm>
 #include <memory>
 
+#include <QBuffer>
 #include <QFileInfo>
 
+#include <poppler-annotation.h>
 #include <poppler-form.h>
 #include <poppler-link.h>
 #include <poppler-qt6.h>
@@ -12,6 +14,41 @@
 namespace
 {
 constexpr double kBaseDpi = 72.0;
+constexpr double kAnnotationPreviewDpi = 144.0;
+
+QByteArray renderAnnotationAppearancePng(
+    Poppler::Page &page,
+    const QRectF &normalizedBoundary,
+    const QSizeF &pageSize)
+{
+    if (!normalizedBoundary.isValid() || normalizedBoundary.isEmpty() || pageSize.isEmpty()) {
+        return {};
+    }
+
+    const QRectF pageRect(normalizedBoundary.x() * pageSize.width(),
+                          normalizedBoundary.y() * pageSize.height(),
+                          normalizedBoundary.width() * pageSize.width(),
+                          normalizedBoundary.height() * pageSize.height());
+    const double scale = kAnnotationPreviewDpi / kBaseDpi;
+    const int x = qMax(0, static_cast<int>(std::floor(pageRect.left() * scale)));
+    const int y = qMax(0, static_cast<int>(std::floor(pageRect.top() * scale)));
+    const int width = qMax(1, static_cast<int>(std::ceil(pageRect.width() * scale)));
+    const int height = qMax(1, static_cast<int>(std::ceil(pageRect.height() * scale)));
+
+    const QImage image = page.renderToImage(kAnnotationPreviewDpi, kAnnotationPreviewDpi, x, y, width, height);
+    if (image.isNull()) {
+        return {};
+    }
+
+    QByteArray pngBytes;
+    QBuffer buffer(&pngBytes);
+    buffer.open(QIODevice::WriteOnly);
+    if (!image.save(&buffer, "PNG")) {
+        return {};
+    }
+
+    return pngBytes;
+}
 }
 
 PopplerAdapter::PopplerAdapter() = default;
@@ -226,6 +263,98 @@ QVector<PdfSearchHit> PopplerAdapter::search(const QString &query)
 
     m_lastError.clear();
     return hits;
+}
+
+QVector<PdfAnnotation> PopplerAdapter::annotations(int pageIndex)
+{
+    QVector<PdfAnnotation> result;
+    std::unique_ptr<Poppler::Page> page = loadPage(pageIndex);
+    if (!page) {
+        return result;
+    }
+
+    const QSizeF pageSize = page->pageSizeF();
+    const std::vector<std::unique_ptr<Poppler::Annotation>> pageAnnotations = page->annotations();
+    result.reserve(static_cast<qsizetype>(pageAnnotations.size()));
+
+    auto toPageRect = [&pageSize](const QRectF &normalizedRect) {
+        return QRectF(
+            normalizedRect.x() * pageSize.width(),
+            normalizedRect.y() * pageSize.height(),
+            normalizedRect.width() * pageSize.width(),
+            normalizedRect.height() * pageSize.height()).normalized();
+    };
+
+    for (const std::unique_ptr<Poppler::Annotation> &annotation : pageAnnotations) {
+        if (!annotation) {
+            continue;
+        }
+
+        PdfAnnotation nativeAnnotation;
+        nativeAnnotation.id = annotation->uniqueName();
+        nativeAnnotation.pageIndex = pageIndex;
+        nativeAnnotation.text = annotation->contents();
+        nativeAnnotation.color = annotation->style().color();
+        if (!nativeAnnotation.color.isValid()) {
+            nativeAnnotation.color = QColor(255, 235, 59, 110);
+        }
+
+        switch (annotation->subType()) {
+        case Poppler::Annotation::AHighlight: {
+            const auto *highlight = dynamic_cast<Poppler::HighlightAnnotation *>(annotation.get());
+            if (!highlight || highlight->highlightType() != Poppler::HighlightAnnotation::Highlight) {
+                continue;
+            }
+            nativeAnnotation.kind = PdfAnnotationKind::Highlight;
+            const QList<Poppler::HighlightAnnotation::Quad> quads = highlight->highlightQuads();
+            for (const auto &quad : quads) {
+                QRectF quadRect;
+                for (const QPointF &point : quad.points) {
+                    quadRect = quadRect.isNull() ? QRectF(point, QSizeF()) : quadRect.united(QRectF(point, QSizeF()));
+                }
+                if (!quadRect.isNull()) {
+                    nativeAnnotation.pageRects.append(toPageRect(quadRect.normalized()));
+                }
+            }
+            break;
+        }
+        case Poppler::Annotation::AGeom: {
+            const auto *geom = dynamic_cast<Poppler::GeomAnnotation *>(annotation.get());
+            if (!geom || geom->geomType() != Poppler::GeomAnnotation::InscribedSquare) {
+                continue;
+            }
+            nativeAnnotation.kind = PdfAnnotationKind::Rectangle;
+            nativeAnnotation.pageRects.append(toPageRect(annotation->boundary()));
+            break;
+        }
+        case Poppler::Annotation::AText: {
+            const auto *textAnnotation = dynamic_cast<Poppler::TextAnnotation *>(annotation.get());
+            if (!textAnnotation) {
+                continue;
+            }
+            nativeAnnotation.kind = textAnnotation->textType() == Poppler::TextAnnotation::Linked
+                ? PdfAnnotationKind::Note
+                : PdfAnnotationKind::FreeText;
+            nativeAnnotation.pageRects.append(toPageRect(annotation->boundary()));
+            break;
+        }
+        case Poppler::Annotation::AStamp:
+            nativeAnnotation.kind = PdfAnnotationKind::Signature;
+            nativeAnnotation.pageRects.append(toPageRect(annotation->boundary()));
+            nativeAnnotation.binaryPayload =
+                renderAnnotationAppearancePng(*page, annotation->boundary(), pageSize);
+            break;
+        default:
+            continue;
+        }
+
+        if (!nativeAnnotation.pageRects.isEmpty()) {
+            result.append(nativeAnnotation);
+        }
+    }
+
+    m_lastError.clear();
+    return result;
 }
 
 QVector<PdfFormField> PopplerAdapter::formFields(int pageIndex)

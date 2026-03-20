@@ -19,6 +19,7 @@ public:
     bool hasSelectedRedaction() const;
     bool remapPages(const QVector<int> &newOrder);
 
+    QVector<PdfRedaction> redactions() const;
     QVector<PdfRedaction> redactionsForPage(int pageIndex) const;
     bool hasRedactions() const;
     QJsonArray toJson() const;

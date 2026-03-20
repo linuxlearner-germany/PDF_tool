@@ -29,6 +29,7 @@ public:
     virtual QStringList pageLabels() = 0;
     virtual PdfTextSelection buildTextSelection(int pageIndex, const QRectF &pageRect) = 0;
     virtual QVector<PdfSearchHit> search(const QString &query) = 0;
+    virtual QVector<PdfAnnotation> annotations(int pageIndex) = 0;
     virtual QVector<PdfFormField> formFields(int pageIndex) = 0;
     virtual PdfDocumentMetadata documentMetadata() const = 0;
     virtual QVector<PdfOutlineEntry> outlineEntries() const = 0;

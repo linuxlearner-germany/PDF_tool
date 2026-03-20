@@ -60,7 +60,7 @@ public:
     QByteArray currentUserPassword() const;
     QByteArray currentOwnerPassword() const;
     bool printDocument(QPrinter *printer);
-    bool exportEditedPdf(const QString &outputFile);
+    bool exportEditedPdf(const QString &outputFile, bool excludeSelectedSignatureAnnotation = false);
     bool exportRedactedPdf(const QString &outputFile);
     bool hasSelectedOverlay() const;
     bool hasRedactions() const;
@@ -70,6 +70,7 @@ public:
     bool hasSelectedTextEditAnnotation() const;
     QString selectedTextEditText() const;
     bool hasSelectedSignatureAnnotation() const;
+    bool selectedSignatureAnnotationData(int &pageIndex, QRectF &pageRect, QByteArray &imageData) const;
     bool hasSelectedMovableAnnotation() const;
     bool canUndo() const;
     bool canRedo() const;

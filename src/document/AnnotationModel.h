@@ -12,6 +12,7 @@ class AnnotationModel
 {
 public:
     void clear();
+    void setAnnotations(const QVector<PdfAnnotation> &annotations);
 
     bool addHighlightFromSelection(const SelectionModel &selection);
     bool addRectangle(int pageIndex, const QRectF &pageRect);
@@ -33,6 +34,7 @@ public:
     PdfAnnotationKind selectedAnnotationKind() const;
     QString selectedAnnotationText() const;
 
+    QVector<PdfAnnotation> annotations() const;
     QVector<PdfAnnotation> annotationsForPage(int pageIndex) const;
     QJsonArray toJson() const;
     bool fromJson(const QJsonArray &annotationsArray);

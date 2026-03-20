@@ -36,6 +36,7 @@ public:
     QStringList pageLabels() override;
     PdfTextSelection buildTextSelection(int pageIndex, const QRectF &pageRect) override;
     QVector<PdfSearchHit> search(const QString &query) override;
+    QVector<PdfAnnotation> annotations(int pageIndex) override;
     QVector<PdfFormField> formFields(int pageIndex) override;
     PdfDocumentMetadata documentMetadata() const override;
     QVector<PdfOutlineEntry> outlineEntries() const override;

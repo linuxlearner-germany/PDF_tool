@@ -14,6 +14,11 @@ void FormFieldModel::setFields(const QVector<PdfFormField> &fields)
     m_fields = fields;
 }
 
+QVector<PdfFormField> FormFieldModel::fields() const
+{
+    return m_fields;
+}
+
 QVector<PdfFormField> FormFieldModel::fieldsForPage(int pageIndex) const
 {
     QVector<PdfFormField> fields;

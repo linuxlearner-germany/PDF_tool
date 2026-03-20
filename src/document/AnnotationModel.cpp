@@ -17,6 +17,11 @@ void AnnotationModel::clear()
     m_annotations.clear();
 }
 
+void AnnotationModel::setAnnotations(const QVector<PdfAnnotation> &annotations)
+{
+    m_annotations = annotations;
+}
+
 bool AnnotationModel::addHighlightFromSelection(const SelectionModel &selection)
 {
     if (selection.isEmpty()) {
@@ -295,6 +300,11 @@ QString AnnotationModel::selectedAnnotationText() const
     }
 
     return {};
+}
+
+QVector<PdfAnnotation> AnnotationModel::annotations() const
+{
+    return m_annotations;
 }
 
 QVector<PdfAnnotation> AnnotationModel::annotationsForPage(int pageIndex) const

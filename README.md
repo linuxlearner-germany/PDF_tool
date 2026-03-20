@@ -18,8 +18,8 @@ PDFTool richtet sich an lokale Desktop-Workflows, bei denen PDFs nicht nur geles
 Wichtig:
 
 - Das Original-PDF wird nicht "live" semantisch umgeschrieben.
-- Viele Aenderungen werden intern als Overlays bzw. Sidecar-Daten verwaltet.
-- Mit dem Export werden diese Aenderungen dauerhaft in ein neues PDF uebernommen.
+- Viele Aenderungen beginnen intern als Overlays bzw. temporaere Sidecar-Daten.
+- Mit Export oder Speichern werden diese Aenderungen dauerhaft in PDF-Dateien uebernommen.
 
 ## Feature-Set
 
@@ -43,6 +43,7 @@ Wichtig:
 - Textnotizen und freie Textfelder
 - sichtbares Text-Ersetzen in Auswahlbereichen
 - Farben aendern und ausgewaehlte Annotationen loeschen
+- Export schreibt Highlights, Rechtecke, Notizen, Freitext und Signaturbilder wenn moeglich als native PDF-Annotationen
 
 ### Formulare
 
@@ -56,6 +57,8 @@ Wichtig:
 - Bereiche zur Schwaerzung markieren
 - schwarze Redaction-Overlays im Viewer
 - Export als dauerhaft geschwaerztes PDF
+- nativer PDF-Export mit schwarzen Vektor-Overlays statt reinem Raster-Fallback
+- destruktiver Redaction-Export ersetzt redigierte Seiten durch neu aufgebaute Seitenabbilder
 
 ### OCR
 
@@ -63,6 +66,7 @@ Wichtig:
 - OCR fuer einen Auswahlbereich
 - Ergebnisdialog mit Copy-Funktion
 - lokale Ausfuehrung ueber `tesseract`
+- Export erzeugt zusaetzlich einen durchsuchbaren OCR-Textlayer, wenn `tesseract` verfuegbar ist
 
 ### Weitere PDF-Operationen
 
@@ -70,6 +74,7 @@ Wichtig:
 - PDFs aufteilen
 - passwortgeschuetzte PDFs oeffnen
 - verschluesselte PDFs exportieren
+- kryptografisch signierte PDFs ueber das Poppler-Signatur-Backend exportieren
 
 ## Status
 
@@ -78,9 +83,7 @@ Das Projekt ist deutlich ueber ein MVP hinaus und funktioniert bereits als produ
 Aktuell nicht enthalten:
 
 - echte semantische PDF-Textbearbeitung mit Reflow
-- kryptografische PDF-Signaturen
-- OCR-Export als echter durchsuchbarer Textlayer
-- natives Speichern von Annotationen direkt im PDF
+- selektive objektgenaue Redaction einzelner PDF-Inhalte ohne Seiten-Flattening
 
 ## Schnellstart
 
@@ -138,6 +141,13 @@ cd installer
 bash install.sh
 ```
 
+Update einer bestehenden lokalen Installation:
+
+```bash
+cd installer
+bash update.sh
+```
+
 Wichtig:
 
 - das Skript nicht mit `sudo` starten
@@ -148,6 +158,13 @@ Ohne Rueckfrage fehlende Pakete installieren:
 ```bash
 cd installer
 AUTO_INSTALL_DEPS=1 bash install.sh
+```
+
+Dasselbe fuer Updates:
+
+```bash
+cd installer
+AUTO_INSTALL_DEPS=1 bash update.sh
 ```
 
 Bestimmten Branch installieren:
@@ -196,15 +213,21 @@ Direkt aus dem Build:
 ./build/PDFTool
 ```
 
+## Speichern
+
+`Strg+S` schreibt den aktuellen Bearbeitungsstand direkt in das geoeffnete PDF zurueck.
+Dabei wird die Datei neu erzeugt und anschliessend erneut geladen.
+Wenn Redactions enthalten sind, wird dabei ein destruktiver Exportpfad verwendet.
+
 ## Sidecar-Dateien
 
-Nicht alle Bearbeitungen werden direkt im Original-PDF gespeichert. PDFTool legt dafuer Sidecar-Dateien neben dem Dokument an, zum Beispiel:
+Waehrend der Bearbeitung nutzt PDFTool weiterhin Sidecar-Dateien neben dem Dokument, zum Beispiel:
 
 ```text
 dein_dokument.pdf.annotations.json
 ```
 
-Darin werden aktuell unter anderem abgelegt:
+Darin werden unter anderem der aktuelle Arbeitsstand und noch nicht ins PDF geschriebene Aenderungen abgelegt:
 
 - Annotationen
 - freie Textfelder

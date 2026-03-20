@@ -102,6 +102,11 @@ bool RedactionModel::remapPages(const QVector<int> &newOrder)
     return true;
 }
 
+QVector<PdfRedaction> RedactionModel::redactions() const
+{
+    return m_redactions;
+}
+
 QVector<PdfRedaction> RedactionModel::redactionsForPage(int pageIndex) const
 {
     QVector<PdfRedaction> redactions;

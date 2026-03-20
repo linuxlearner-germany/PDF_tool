@@ -4,6 +4,8 @@ Enthalten:
 
 - `install.sh`
   Klont das GitHub-Repo und installiert lokal nach `~/.local`
+- `update.sh`
+  Aktualisiert eine bestehende lokale Installation in `~/.local`
 - `build_deb.sh`
   Baut aus dem aktuellen lokalen Checkout ein Debian-Paket in `installer/dist/`
 - `linux/pdf-tool.desktop.in`
@@ -17,6 +19,7 @@ Schnellstart:
 
 ```bash
 ./installer/install.sh
+./installer/update.sh
 ./installer/build_deb.sh
 ```
 
@@ -45,10 +48,18 @@ Optionaler Branch:
 
 ```bash
 REPO_BRANCH=main ./installer/install.sh
+REPO_BRANCH=main ./installer/update.sh
 ```
 
 Automatische Paketinstallation ohne Rückfrage:
 
 ```bash
 AUTO_INSTALL_DEPS=1 ./installer/install.sh
+AUTO_INSTALL_DEPS=1 ./installer/update.sh
+```
+
+Vorhandene lokale Installation aktualisieren:
+
+```bash
+./installer/update.sh
 ```

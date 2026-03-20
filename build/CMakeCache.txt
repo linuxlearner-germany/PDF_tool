@@ -253,6 +253,12 @@ CMAKE_TAPI:FILEPATH=CMAKE_TAPI-NOTFOUND
 CMAKE_VERBOSE_MAKEFILE:BOOL=FALSE
 
 //Path to a file.
+CUPS_INCLUDE_DIR:PATH=CUPS_INCLUDE_DIR-NOTFOUND
+
+//Path to a library.
+CUPS_LIBRARIES:FILEPATH=CUPS_LIBRARIES-NOTFOUND
+
+//Path to a file.
 OPENGL_EGL_INCLUDE_DIR:PATH=OPENGL_EGL_INCLUDE_DIR-NOTFOUND
 
 //Path to a file.
@@ -331,6 +337,9 @@ Qt6GuiTools_DIR:PATH=/usr/lib/x86_64-linux-gnu/cmake/Qt6GuiTools
 //The directory containing a CMake configuration file for Qt6Gui.
 Qt6Gui_DIR:PATH=/usr/lib/x86_64-linux-gnu/cmake/Qt6Gui
 
+//The directory containing a CMake configuration file for Qt6PrintSupport.
+Qt6PrintSupport_DIR:PATH=/usr/lib/x86_64-linux-gnu/cmake/Qt6PrintSupport
+
 //The directory containing a CMake configuration file for Qt6WidgetsTools.
 Qt6WidgetsTools_DIR:PATH=/usr/lib/x86_64-linux-gnu/cmake/Qt6WidgetsTools
 
@@ -359,6 +368,9 @@ XKB_INCLUDE_DIR:PATH=/usr/include
 XKB_LIBRARY:FILEPATH=/usr/lib/x86_64-linux-gnu/libxkbcommon.so
 
 //Path to a library.
+pkgcfg_lib_JPEG_LIB_jpeg:FILEPATH=/home/paul/Nextcloud/PDF_tool/.localdeps/sysroot/usr/lib/x86_64-linux-gnu/libjpeg.so
+
+//Path to a library.
 pkgcfg_lib_PKG_XKB_xkbcommon:FILEPATH=/usr/lib/x86_64-linux-gnu/libxkbcommon.so
 
 //Path to a library.
@@ -366,6 +378,9 @@ pkgcfg_lib_POPPLER_QT6_poppler-qt6:FILEPATH=/home/paul/Nextcloud/PDF_tool/.local
 
 //Path to a library.
 pkgcfg_lib_QPDF_qpdf:FILEPATH=/home/paul/Nextcloud/PDF_tool/.localdeps/sysroot/usr/lib/x86_64-linux-gnu/libqpdf.a
+
+//Path to a library.
+pkgcfg_lib_ZLIB_PC_z:FILEPATH=/usr/lib/x86_64-linux-gnu/libz.so
 
 
 ########################
@@ -535,6 +550,10 @@ CMAKE_TAPI-ADVANCED:INTERNAL=1
 CMAKE_UNAME:INTERNAL=/usr/bin/uname
 //ADVANCED property for variable: CMAKE_VERBOSE_MAKEFILE
 CMAKE_VERBOSE_MAKEFILE-ADVANCED:INTERNAL=1
+//ADVANCED property for variable: CUPS_INCLUDE_DIR
+CUPS_INCLUDE_DIR-ADVANCED:INTERNAL=1
+//ADVANCED property for variable: CUPS_LIBRARIES
+CUPS_LIBRARIES-ADVANCED:INTERNAL=1
 //Details about finding OpenGL
 FIND_PACKAGE_MESSAGE_DETAILS_OpenGL:INTERNAL=[/usr/lib/x86_64-linux-gnu/libOpenGL.so][/usr/lib/x86_64-linux-gnu/libGLX.so][/usr/include][c ][v()]
 //Details about finding PkgConfig
@@ -551,6 +570,41 @@ FIND_PACKAGE_MESSAGE_DETAILS_WrapVulkanHeaders:INTERNAL=[/usr/include][v()]
 FIND_PACKAGE_MESSAGE_DETAILS_XKB:INTERNAL=[/usr/lib/x86_64-linux-gnu/libxkbcommon.so][/usr/include][v1.7.0(0.5.0)]
 //Test HAVE_STDATOMIC
 HAVE_STDATOMIC:INTERNAL=1
+JPEG_LIB_CFLAGS:INTERNAL=-I/home/paul/Nextcloud/PDF_tool/.localdeps/sysroot/usr/include
+JPEG_LIB_CFLAGS_I:INTERNAL=
+JPEG_LIB_CFLAGS_OTHER:INTERNAL=
+JPEG_LIB_FOUND:INTERNAL=1
+JPEG_LIB_INCLUDEDIR:INTERNAL=/home/paul/Nextcloud/PDF_tool/.localdeps/sysroot/usr/include
+JPEG_LIB_INCLUDE_DIRS:INTERNAL=/home/paul/Nextcloud/PDF_tool/.localdeps/sysroot/usr/include
+JPEG_LIB_LDFLAGS:INTERNAL=-L/home/paul/Nextcloud/PDF_tool/.localdeps/sysroot/usr/lib/x86_64-linux-gnu;-ljpeg
+JPEG_LIB_LDFLAGS_OTHER:INTERNAL=
+JPEG_LIB_LIBDIR:INTERNAL=/home/paul/Nextcloud/PDF_tool/.localdeps/sysroot/usr/lib/x86_64-linux-gnu
+JPEG_LIB_LIBRARIES:INTERNAL=jpeg
+JPEG_LIB_LIBRARY_DIRS:INTERNAL=/home/paul/Nextcloud/PDF_tool/.localdeps/sysroot/usr/lib/x86_64-linux-gnu
+JPEG_LIB_LIBS:INTERNAL=
+JPEG_LIB_LIBS_L:INTERNAL=
+JPEG_LIB_LIBS_OTHER:INTERNAL=
+JPEG_LIB_LIBS_PATHS:INTERNAL=
+JPEG_LIB_MODULE_NAME:INTERNAL=libjpeg
+JPEG_LIB_PREFIX:INTERNAL=/home/paul/Nextcloud/PDF_tool/.localdeps/sysroot/usr
+JPEG_LIB_STATIC_CFLAGS:INTERNAL=-I/home/paul/Nextcloud/PDF_tool/.localdeps/sysroot/usr/include
+JPEG_LIB_STATIC_CFLAGS_I:INTERNAL=
+JPEG_LIB_STATIC_CFLAGS_OTHER:INTERNAL=
+JPEG_LIB_STATIC_INCLUDE_DIRS:INTERNAL=/home/paul/Nextcloud/PDF_tool/.localdeps/sysroot/usr/include
+JPEG_LIB_STATIC_LDFLAGS:INTERNAL=-L/home/paul/Nextcloud/PDF_tool/.localdeps/sysroot/usr/lib/x86_64-linux-gnu;-ljpeg
+JPEG_LIB_STATIC_LDFLAGS_OTHER:INTERNAL=
+JPEG_LIB_STATIC_LIBDIR:INTERNAL=
+JPEG_LIB_STATIC_LIBRARIES:INTERNAL=jpeg
+JPEG_LIB_STATIC_LIBRARY_DIRS:INTERNAL=/home/paul/Nextcloud/PDF_tool/.localdeps/sysroot/usr/lib/x86_64-linux-gnu
+JPEG_LIB_STATIC_LIBS:INTERNAL=
+JPEG_LIB_STATIC_LIBS_L:INTERNAL=
+JPEG_LIB_STATIC_LIBS_OTHER:INTERNAL=
+JPEG_LIB_STATIC_LIBS_PATHS:INTERNAL=
+JPEG_LIB_VERSION:INTERNAL=2.1.5
+JPEG_LIB_libjpeg_INCLUDEDIR:INTERNAL=
+JPEG_LIB_libjpeg_LIBDIR:INTERNAL=
+JPEG_LIB_libjpeg_PREFIX:INTERNAL=
+JPEG_LIB_libjpeg_VERSION:INTERNAL=
 //ADVANCED property for variable: OPENGL_EGL_INCLUDE_DIR
 OPENGL_EGL_INCLUDE_DIR-ADVANCED:INTERNAL=1
 //ADVANCED property for variable: OPENGL_GLES2_INCLUDE_DIR
@@ -788,6 +842,12 @@ QT_FEATURE_cross_compile:INTERNAL=OFF
 QT_FEATURE_cssparser:INTERNAL=ON
 //Qt feature: ctf (from target Qt6::Core)
 QT_FEATURE_ctf:INTERNAL=OFF
+//Qt feature: cups (from target Qt6::PrintSupport)
+QT_FEATURE_cups:INTERNAL=ON
+//Qt feature: cupsjobwidget (from target Qt6::PrintSupport)
+QT_FEATURE_cupsjobwidget:INTERNAL=ON
+//Qt feature: cupspassworddialog (from target Qt6::PrintSupport)
+QT_FEATURE_cupspassworddialog:INTERNAL=ON
 //Qt feature: cursor (from target Qt6::Gui)
 QT_FEATURE_cursor:INTERNAL=ON
 //Qt feature: cxx11_future (from target Qt6::Core)
@@ -1138,6 +1198,14 @@ QT_FEATURE_posix_sem:INTERNAL=ON
 QT_FEATURE_posix_shm:INTERNAL=ON
 //Qt feature: precompile_header (from target Qt6::Core)
 QT_FEATURE_precompile_header:INTERNAL=ON
+//Qt feature: printdialog (from target Qt6::PrintSupport)
+QT_FEATURE_printdialog:INTERNAL=ON
+//Qt feature: printer (from target Qt6::PrintSupport)
+QT_FEATURE_printer:INTERNAL=ON
+//Qt feature: printpreviewdialog (from target Qt6::PrintSupport)
+QT_FEATURE_printpreviewdialog:INTERNAL=ON
+//Qt feature: printpreviewwidget (from target Qt6::PrintSupport)
+QT_FEATURE_printpreviewwidget:INTERNAL=ON
 //Qt feature: printsupport (from target Qt6::Core)
 QT_FEATURE_printsupport:INTERNAL=ON
 //Qt feature: private_tests (from target Qt6::Core)
@@ -1452,23 +1520,66 @@ Vulkan_GLSLC_EXECUTABLE-ADVANCED:INTERNAL=1
 Vulkan_INCLUDE_DIR-ADVANCED:INTERNAL=1
 //ADVANCED property for variable: Vulkan_LIBRARY
 Vulkan_LIBRARY-ADVANCED:INTERNAL=1
+ZLIB_PC_CFLAGS:INTERNAL=-I/usr/include
+ZLIB_PC_CFLAGS_I:INTERNAL=
+ZLIB_PC_CFLAGS_OTHER:INTERNAL=
+ZLIB_PC_FOUND:INTERNAL=1
+ZLIB_PC_INCLUDEDIR:INTERNAL=/usr/include
+ZLIB_PC_INCLUDE_DIRS:INTERNAL=/usr/include
+ZLIB_PC_LDFLAGS:INTERNAL=-L/usr/lib/x86_64-linux-gnu;-lz
+ZLIB_PC_LDFLAGS_OTHER:INTERNAL=
+ZLIB_PC_LIBDIR:INTERNAL=/usr/lib/x86_64-linux-gnu
+ZLIB_PC_LIBRARIES:INTERNAL=z
+ZLIB_PC_LIBRARY_DIRS:INTERNAL=/usr/lib/x86_64-linux-gnu
+ZLIB_PC_LIBS:INTERNAL=
+ZLIB_PC_LIBS_L:INTERNAL=
+ZLIB_PC_LIBS_OTHER:INTERNAL=
+ZLIB_PC_LIBS_PATHS:INTERNAL=
+ZLIB_PC_MODULE_NAME:INTERNAL=zlib
+ZLIB_PC_PREFIX:INTERNAL=/usr
+ZLIB_PC_STATIC_CFLAGS:INTERNAL=-I/usr/include
+ZLIB_PC_STATIC_CFLAGS_I:INTERNAL=
+ZLIB_PC_STATIC_CFLAGS_OTHER:INTERNAL=
+ZLIB_PC_STATIC_INCLUDE_DIRS:INTERNAL=/usr/include
+ZLIB_PC_STATIC_LDFLAGS:INTERNAL=-L/usr/lib/x86_64-linux-gnu;-lz
+ZLIB_PC_STATIC_LDFLAGS_OTHER:INTERNAL=
+ZLIB_PC_STATIC_LIBDIR:INTERNAL=
+ZLIB_PC_STATIC_LIBRARIES:INTERNAL=z
+ZLIB_PC_STATIC_LIBRARY_DIRS:INTERNAL=/usr/lib/x86_64-linux-gnu
+ZLIB_PC_STATIC_LIBS:INTERNAL=
+ZLIB_PC_STATIC_LIBS_L:INTERNAL=
+ZLIB_PC_STATIC_LIBS_OTHER:INTERNAL=
+ZLIB_PC_STATIC_LIBS_PATHS:INTERNAL=
+ZLIB_PC_VERSION:INTERNAL=1.3.1
+ZLIB_PC_zlib_INCLUDEDIR:INTERNAL=
+ZLIB_PC_zlib_LIBDIR:INTERNAL=
+ZLIB_PC_zlib_PREFIX:INTERNAL=
+ZLIB_PC_zlib_VERSION:INTERNAL=
 //linker supports push/pop state
 _CMAKE_CXX_LINKER_PUSHPOP_STATE_SUPPORTED:INTERNAL=TRUE
 //linker supports push/pop state
 _CMAKE_LINKER_PUSHPOP_STATE_SUPPORTED:INTERNAL=TRUE
 //CMAKE_INSTALL_PREFIX during last run
 _GNUInstallDirs_LAST_CMAKE_INSTALL_PREFIX:INTERNAL=/usr/local
+__pkg_config_arguments_JPEG_LIB:INTERNAL=REQUIRED;IMPORTED_TARGET;libjpeg
 __pkg_config_arguments_PKG_XKB:INTERNAL=QUIET;xkbcommon
 __pkg_config_arguments_POPPLER_QT6:INTERNAL=REQUIRED;IMPORTED_TARGET;poppler-qt6
 __pkg_config_arguments_QPDF:INTERNAL=IMPORTED_TARGET;libqpdf
+__pkg_config_arguments_ZLIB_PC:INTERNAL=REQUIRED;IMPORTED_TARGET;zlib
+__pkg_config_checked_JPEG_LIB:INTERNAL=1
 __pkg_config_checked_PKG_XKB:INTERNAL=1
 __pkg_config_checked_POPPLER_QT6:INTERNAL=1
 __pkg_config_checked_QPDF:INTERNAL=1
+__pkg_config_checked_ZLIB_PC:INTERNAL=1
+//ADVANCED property for variable: pkgcfg_lib_JPEG_LIB_jpeg
+pkgcfg_lib_JPEG_LIB_jpeg-ADVANCED:INTERNAL=1
 //ADVANCED property for variable: pkgcfg_lib_PKG_XKB_xkbcommon
 pkgcfg_lib_PKG_XKB_xkbcommon-ADVANCED:INTERNAL=1
 //ADVANCED property for variable: pkgcfg_lib_POPPLER_QT6_poppler-qt6
 pkgcfg_lib_POPPLER_QT6_poppler-qt6-ADVANCED:INTERNAL=1
 //ADVANCED property for variable: pkgcfg_lib_QPDF_qpdf
 pkgcfg_lib_QPDF_qpdf-ADVANCED:INTERNAL=1
-prefix_result:INTERNAL=/home/paul/Nextcloud/PDF_tool/.localdeps/sysroot/usr/lib/x86_64-linux-gnu
+//ADVANCED property for variable: pkgcfg_lib_ZLIB_PC_z
+pkgcfg_lib_ZLIB_PC_z-ADVANCED:INTERNAL=1
+prefix_result:INTERNAL=/usr/lib/x86_64-linux-gnu
 

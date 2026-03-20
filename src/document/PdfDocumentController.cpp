@@ -5,6 +5,7 @@
 #include <QBuffer>
 #include <QClipboard>
 #include <QFile>
+#include <QDir>
 #include <QGuiApplication>
 #include <QJsonArray>
 #include <QJsonDocument>
@@ -15,10 +16,12 @@
 #include <QPageSize>
 #include <QPdfWriter>
 #include <QPixmap>
+#include <QTemporaryFile>
 
 #include <QtPrintSupport/QPrinter>
 
 #include "document/PageThumbnailProvider.h"
+#include "operations/QPdfOperations.h"
 #include "rendering/PdfRenderEngine.h"
 #include "services/OcrService.h"
 
@@ -29,6 +32,89 @@ constexpr double kMaxZoom = 4.0;
 constexpr double kZoomStep = 0.25;
 constexpr double kRedactionExportScale = 2.0;
 constexpr int kSidecarVersion = 2;
+
+void drawSearchableOcrTextLayer(QPainter &painter, const QImage &pageImage, const QSizeF &targetPageSize)
+{
+    if (pageImage.isNull() || targetPageSize.isEmpty() || !OcrService::isAvailable()) {
+        return;
+    }
+
+    QString ocrError;
+    const QVector<OcrWordBox> wordBoxes = OcrService::recognizeImageWords(pageImage, &ocrError);
+    if (wordBoxes.isEmpty()) {
+        return;
+    }
+
+    const double scaleX = targetPageSize.width() / static_cast<double>(pageImage.width());
+    const double scaleY = targetPageSize.height() / static_cast<double>(pageImage.height());
+
+    painter.save();
+    painter.setPen(QColor(0, 0, 0, 1));
+
+    for (const OcrWordBox &wordBox : wordBoxes) {
+        const QRectF targetRect(wordBox.imageRect.left() * scaleX,
+                                wordBox.imageRect.top() * scaleY,
+                                wordBox.imageRect.width() * scaleX,
+                                wordBox.imageRect.height() * scaleY);
+        if (targetRect.isEmpty()) {
+            continue;
+        }
+
+        QFont font = painter.font();
+        font.setPixelSize(qMax(1, static_cast<int>(targetRect.height() * 0.8)));
+        painter.setFont(font);
+        painter.drawText(targetRect, Qt::AlignLeft | Qt::AlignVCenter, wordBox.text);
+    }
+
+    painter.restore();
+}
+
+bool isNativePdfAnnotationSupported(const PdfAnnotation &annotation)
+{
+    return annotation.kind == PdfAnnotationKind::Highlight
+        || annotation.kind == PdfAnnotationKind::Rectangle
+        || annotation.kind == PdfAnnotationKind::Note
+        || annotation.kind == PdfAnnotationKind::FreeText
+        || annotation.kind == PdfAnnotationKind::Signature;
+}
+
+bool formFieldsEqual(const QVector<PdfFormField> &lhs, const QVector<PdfFormField> &rhs)
+{
+    if (lhs.size() != rhs.size()) {
+        return false;
+    }
+
+    for (int index = 0; index < lhs.size(); ++index) {
+        const PdfFormField &left = lhs.at(index);
+        const PdfFormField &right = rhs.at(index);
+        if (left.id != right.id
+            || left.kind != right.kind
+            || left.textValue != right.textValue
+            || left.checked != right.checked) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+QVector<PdfAnnotation> filteredAnnotations(
+    const QVector<PdfAnnotation> &annotations,
+    const QString &excludedAnnotationId)
+{
+    if (excludedAnnotationId.isEmpty()) {
+        return annotations;
+    }
+
+    QVector<PdfAnnotation> result;
+    result.reserve(annotations.size());
+    for (const PdfAnnotation &annotation : annotations) {
+        if (annotation.id != excludedAnnotationId) {
+            result.append(annotation);
+        }
+    }
+    return result;
+}
 }
 
 PdfDocumentController::PdfDocumentController(std::unique_ptr<PdfRenderEngine> renderEngine, QObject *parent)
@@ -63,10 +149,13 @@ bool PdfDocumentController::openDocument(const QString &filePath, const QByteArr
     m_currentUserPassword = userPassword;
 
     QVector<PdfFormField> fields;
+    QVector<PdfAnnotation> annotations;
     for (int pageIndex = 0; pageIndex < m_renderEngine->pageCount(); ++pageIndex) {
+        annotations += m_renderEngine->annotations(pageIndex);
         const QVector<PdfFormField> pageFields = m_renderEngine->formFields(pageIndex);
         fields += pageFields;
     }
+    m_annotationModel.setAnnotations(annotations);
     m_baseFormFields = fields;
     m_formFieldModel.setFields(fields);
     loadSidecarState();
@@ -244,10 +333,39 @@ bool PdfDocumentController::printDocument(QPrinter *printer)
     return true;
 }
 
-bool PdfDocumentController::exportEditedPdf(const QString &outputFile)
+bool PdfDocumentController::exportEditedPdf(const QString &outputFile, bool excludeSelectedSignatureAnnotation)
 {
     if (!hasDocument() || outputFile.isEmpty()) {
         return false;
+    }
+
+    const QString excludedAnnotationId = (excludeSelectedSignatureAnnotation && hasSelectedSignatureAnnotation())
+        ? m_annotationModel.selectedAnnotationId()
+        : QString();
+    const QVector<PdfAnnotation> annotations = filteredAnnotations(m_annotationModel.annotations(), excludedAnnotationId);
+    const QVector<PdfFormField> formFields = m_formFieldModel.fields();
+    const bool hasUnsupportedAnnotationKinds = std::any_of(
+        annotations.begin(),
+        annotations.end(),
+        [](const PdfAnnotation &annotation) {
+            return !isNativePdfAnnotationSupported(annotation);
+        });
+    const QVector<PdfRedaction> redactions = m_redactionModel.redactions();
+    const bool formStateChanged = !formFieldsEqual(formFields, m_baseFormFields);
+
+    if (!hasUnsupportedAnnotationKinds && redactions.isEmpty() && (!annotations.isEmpty() || formStateChanged)) {
+        QVector<QSizeF> pageSizes;
+        pageSizes.reserve(pageCount());
+        for (int pageIndex = 0; pageIndex < pageCount(); ++pageIndex) {
+            pageSizes.append(m_renderEngine->pageSizePoints(pageIndex));
+        }
+
+        QPdfOperations operations;
+        const QByteArray password = m_currentOwnerPassword.isEmpty() ? m_currentUserPassword : m_currentOwnerPassword;
+        if (operations.saveEditedState(m_documentPath, outputFile, annotations, formFields, redactions, pageSizes, password)) {
+            emit statusMessageChanged(QStringLiteral("Bearbeitetes PDF mit nativen PDF-Aenderungen exportiert."));
+            return true;
+        }
     }
 
     emit busyStateChanged(true, QStringLiteral("Bearbeitetes PDF wird exportiert..."));
@@ -289,8 +407,9 @@ bool PdfDocumentController::exportEditedPdf(const QString &outputFile)
             QPainter imagePainter(&pageImage);
             imagePainter.setRenderHints(QPainter::Antialiasing | QPainter::TextAntialiasing | QPainter::SmoothPixmapTransform);
 
-            const QVector<PdfAnnotation> annotations = m_annotationModel.annotationsForPage(pageIndex);
-            for (const PdfAnnotation &annotation : annotations) {
+            const QVector<PdfAnnotation> pageAnnotations =
+                filteredAnnotations(m_annotationModel.annotationsForPage(pageIndex), excludedAnnotationId);
+            for (const PdfAnnotation &annotation : pageAnnotations) {
                 switch (annotation.kind) {
                 case PdfAnnotationKind::Highlight:
                     imagePainter.setPen(Qt::NoPen);
@@ -417,7 +536,9 @@ bool PdfDocumentController::exportEditedPdf(const QString &outputFile)
             }
         }
 
-        painter.drawImage(QRectF(0.0, 0.0, writer.width(), writer.height()), pageImage);
+        const QRectF targetRect(0.0, 0.0, writer.width(), writer.height());
+        painter.drawImage(targetRect, pageImage);
+        drawSearchableOcrTextLayer(painter, pageImage, targetRect.size());
     }
 
     painter.end();
@@ -430,6 +551,49 @@ bool PdfDocumentController::exportRedactedPdf(const QString &outputFile)
 {
     if (!hasDocument() || outputFile.isEmpty() || !m_redactionModel.hasRedactions()) {
         return false;
+    }
+
+    const QVector<PdfRedaction> redactions = m_redactionModel.redactions();
+    QVector<QSizeF> pageSizes;
+    QVector<QImage> flattenedPages;
+    pageSizes.reserve(pageCount());
+    flattenedPages.resize(pageCount());
+    for (int pageIndex = 0; pageIndex < pageCount(); ++pageIndex) {
+        pageSizes.append(m_renderEngine->pageSizePoints(pageIndex));
+        const QVector<PdfRedaction> pageRedactions = m_redactionModel.redactionsForPage(pageIndex);
+        if (pageRedactions.isEmpty()) {
+            continue;
+        }
+
+        QImage pageImage = m_renderEngine->renderPage(pageIndex, kRedactionExportScale);
+        if (pageImage.isNull()) {
+            m_lastError = m_renderEngine->lastError();
+            emit errorOccurred(m_lastError);
+            return false;
+        }
+
+        const QSizeF pageSizePoints = m_renderEngine->pageSizePoints(pageIndex);
+        if (pageSizePoints.isValid() && !pageSizePoints.isEmpty()) {
+            QPainter imagePainter(&pageImage);
+            const double scaleX = static_cast<double>(pageImage.width()) / pageSizePoints.width();
+            const double scaleY = static_cast<double>(pageImage.height()) / pageSizePoints.height();
+            for (const PdfRedaction &redaction : pageRedactions) {
+                const QRectF imageRect(redaction.pageRect.left() * scaleX,
+                                       redaction.pageRect.top() * scaleY,
+                                       redaction.pageRect.width() * scaleX,
+                                       redaction.pageRect.height() * scaleY);
+                imagePainter.fillRect(imageRect, Qt::black);
+            }
+        }
+
+        flattenedPages[pageIndex] = pageImage;
+    }
+
+    QPdfOperations operations;
+    const QByteArray password = m_currentOwnerPassword.isEmpty() ? m_currentUserPassword : m_currentOwnerPassword;
+    if (operations.saveDestructiveRedactedState(m_documentPath, outputFile, flattenedPages, pageSizes, password)) {
+        emit statusMessageChanged(QStringLiteral("Geschwaerztes PDF mit destruktiver Redaction exportiert."));
+        return true;
     }
 
     emit busyStateChanged(true, QStringLiteral("Geschwärztes PDF wird exportiert..."));
@@ -479,7 +643,9 @@ bool PdfDocumentController::exportRedactedPdf(const QString &outputFile)
             }
         }
 
-        painter.drawImage(QRectF(0.0, 0.0, writer.width(), writer.height()), pageImage);
+        const QRectF targetRect(0.0, 0.0, writer.width(), writer.height());
+        painter.drawImage(targetRect, pageImage);
+        drawSearchableOcrTextLayer(painter, pageImage, targetRect.size());
     }
 
     painter.end();
@@ -539,6 +705,32 @@ bool PdfDocumentController::hasSelectedSignatureAnnotation() const
 {
     return m_annotationModel.hasSelectedAnnotation()
         && m_annotationModel.selectedAnnotationKind() == PdfAnnotationKind::Signature;
+}
+
+bool PdfDocumentController::selectedSignatureAnnotationData(int &pageIndex, QRectF &pageRect, QByteArray &imageData) const
+{
+    if (!hasSelectedSignatureAnnotation()) {
+        return false;
+    }
+
+    const QString annotationId = m_annotationModel.selectedAnnotationId();
+    if (annotationId.isEmpty()) {
+        return false;
+    }
+
+    const QVector<PdfAnnotation> annotations = m_annotationModel.annotations();
+    for (const PdfAnnotation &annotation : annotations) {
+        if (annotation.id != annotationId || annotation.kind != PdfAnnotationKind::Signature || annotation.pageRects.isEmpty()) {
+            continue;
+        }
+
+        pageIndex = annotation.pageIndex;
+        pageRect = annotation.pageRects.first().normalized();
+        imageData = annotation.binaryPayload;
+        return true;
+    }
+
+    return false;
 }
 
 bool PdfDocumentController::canUndo() const
@@ -982,8 +1174,56 @@ void PdfDocumentController::saveDocumentState()
         return;
     }
 
-    saveSidecarState();
-    emit statusMessageChanged(QStringLiteral("Änderungen gespeichert."));
+    QTemporaryFile tempFile(QFileInfo(m_documentPath).absolutePath() + QLatin1String("/.pdftool-save-XXXXXX.pdf"));
+    tempFile.setAutoRemove(false);
+    if (!tempFile.open()) {
+        m_lastError = QStringLiteral("Temporäre Zieldatei konnte nicht angelegt werden.");
+        emit errorOccurred(m_lastError);
+        return;
+    }
+    const QString tempPath = tempFile.fileName();
+    tempFile.close();
+
+    if (!exportEditedPdf(tempPath)) {
+        QFile::remove(tempPath);
+        return;
+    }
+
+    QFile originalFile(m_documentPath);
+    const QString backupPath = m_documentPath + QStringLiteral(".bak");
+    QFile::remove(backupPath);
+    if (originalFile.exists() && !originalFile.rename(backupPath)) {
+        QFile::remove(tempPath);
+        m_lastError = QStringLiteral("Originaldatei konnte nicht gesichert werden.");
+        emit errorOccurred(m_lastError);
+        return;
+    }
+
+    if (!QFile::rename(tempPath, m_documentPath)) {
+        QFile::rename(backupPath, m_documentPath);
+        QFile::remove(tempPath);
+        m_lastError = QStringLiteral("Gespeicherte PDF konnte nicht an den Zielort verschoben werden.");
+        emit errorOccurred(m_lastError);
+        return;
+    }
+
+    QFile::remove(backupPath);
+    QFile::remove(annotationSidecarPath());
+
+    const int reopenPageIndex = m_currentPageIndex;
+    const QByteArray ownerPassword = m_currentOwnerPassword;
+    const QByteArray userPassword = m_currentUserPassword;
+    if (!openDocument(m_documentPath, ownerPassword, userPassword)) {
+        m_lastError = QStringLiteral("PDF wurde gespeichert, konnte aber nicht erneut geladen werden.");
+        emit errorOccurred(m_lastError);
+        return;
+    }
+
+    if (reopenPageIndex >= 0 && reopenPageIndex < pageCount()) {
+        goToPage(reopenPageIndex);
+    }
+
+    emit statusMessageChanged(QStringLiteral("Änderungen direkt im PDF gespeichert."));
 }
 
 void PdfDocumentController::undo()

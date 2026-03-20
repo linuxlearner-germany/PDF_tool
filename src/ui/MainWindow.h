@@ -2,9 +2,11 @@
 
 #include <memory>
 
+#include <QByteArray>
 #include <QMainWindow>
 #include <QPoint>
 #include <QPointF>
+#include <QRectF>
 #include <QVector>
 
 #include "document/PdfDocumentTypes.h"
@@ -45,6 +47,7 @@ private slots:
     void exportEncryptedPdf();
     void exportEditedPdf();
     void exportRedactedPdf();
+    void exportSignedPdf();
     void printDocument();
     void insertSignature();
     void runOcrCurrentPage();
@@ -97,6 +100,21 @@ private:
     void refreshNavigationPanels();
     void populateOutlineTree(const QVector<PdfOutlineEntry> &entries, QTreeWidgetItem *parentItem = nullptr);
     void syncThumbnailSelection(int pageIndex);
+    bool promptForCryptographicSignature(
+        QString &certNickname,
+        QString &password,
+        QString &reason,
+        QString &location) const;
+    bool signPdfWithPoppler(
+        const QString &inputFile,
+        const QString &outputFile,
+        int pageIndex,
+        const QRectF &pageRect,
+        const QByteArray &signatureImageData,
+        const QString &certNickname,
+        const QString &password,
+        const QString &reason,
+        const QString &location);
 
     PdfView *m_pdfView {nullptr};
     QTabWidget *m_navigationTabs {nullptr};
@@ -126,6 +144,7 @@ private:
     QAction *m_exportEncryptedPdfAction {nullptr};
     QAction *m_exportEditedPdfAction {nullptr};
     QAction *m_exportRedactedPdfAction {nullptr};
+    QAction *m_exportSignedPdfAction {nullptr};
     QAction *m_printAction {nullptr};
     QAction *m_showMetadataAction {nullptr};
     QAction *m_exitAction {nullptr};
