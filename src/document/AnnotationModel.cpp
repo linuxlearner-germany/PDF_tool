@@ -10,6 +10,28 @@ QString generateAnnotationId()
 {
     return QUuid::createUuid().toString(QUuid::WithoutBraces);
 }
+
+PdfTextStyle normalizedTextStyle(const PdfTextStyle &style)
+{
+    PdfTextStyle normalized = style;
+    if (!normalized.textColor.isValid()) {
+        normalized.textColor = Qt::black;
+    }
+
+    const QString family = normalized.fontFamily.trimmed();
+    if (family.contains(QStringLiteral("courier"), Qt::CaseInsensitive)) {
+        normalized.fontFamily = QStringLiteral("Courier");
+    } else if (family.contains(QStringLiteral("times"), Qt::CaseInsensitive)) {
+        normalized.fontFamily = QStringLiteral("Times New Roman");
+    } else {
+        normalized.fontFamily = QStringLiteral("Helvetica");
+    }
+
+    if (normalized.fontSize <= 0.0) {
+        normalized.fontSize = 12.0;
+    }
+    return normalized;
+}
 }
 
 void AnnotationModel::clear()
@@ -84,7 +106,12 @@ bool AnnotationModel::addNote(int pageIndex, const QRectF &pageRect, const QStri
     return true;
 }
 
-bool AnnotationModel::addFreeText(int pageIndex, const QRectF &pageRect, const QString &text)
+bool AnnotationModel::addFreeText(
+    int pageIndex,
+    const QRectF &pageRect,
+    const QString &text,
+    const PdfTextStyle &style,
+    const QColor &backgroundColor)
 {
     if (pageIndex < 0 || pageRect.isEmpty() || text.trimmed().isEmpty()) {
         return false;
@@ -95,7 +122,8 @@ bool AnnotationModel::addFreeText(int pageIndex, const QRectF &pageRect, const Q
     annotation.kind = PdfAnnotationKind::FreeText;
     annotation.pageIndex = pageIndex;
     annotation.pageRects = { pageRect.normalized() };
-    annotation.color = QColor(255, 255, 255, 230);
+    annotation.color = backgroundColor.isValid() ? backgroundColor : QColor(255, 255, 255, 230);
+    annotation.textStyle = normalizedTextStyle(style);
     annotation.text = text.trimmed();
 
     clearSelection();
@@ -162,6 +190,20 @@ bool AnnotationModel::setText(const QString &annotationId, const QString &text)
         }
 
         annotation->text = trimmedText;
+        return true;
+    }
+
+    return false;
+}
+
+bool AnnotationModel::setFreeTextStyle(const QString &annotationId, const PdfTextStyle &style)
+{
+    if (PdfAnnotation *annotation = findMutable(annotationId)) {
+        if (annotation->kind != PdfAnnotationKind::FreeText) {
+            return false;
+        }
+
+        annotation->textStyle = normalizedTextStyle(style);
         return true;
     }
 
@@ -291,11 +333,33 @@ PdfAnnotationKind AnnotationModel::selectedAnnotationKind() const
     return PdfAnnotationKind::Highlight;
 }
 
+QColor AnnotationModel::selectedAnnotationColor() const
+{
+    for (const PdfAnnotation &annotation : m_annotations) {
+        if (annotation.selected) {
+            return annotation.color;
+        }
+    }
+
+    return {};
+}
+
 QString AnnotationModel::selectedAnnotationText() const
 {
     for (const PdfAnnotation &annotation : m_annotations) {
         if (annotation.selected) {
             return annotation.text;
+        }
+    }
+
+    return {};
+}
+
+PdfTextStyle AnnotationModel::selectedAnnotationTextStyle() const
+{
+    for (const PdfAnnotation &annotation : m_annotations) {
+        if (annotation.selected) {
+            return annotation.textStyle;
         }
     }
 
@@ -329,6 +393,9 @@ QJsonArray AnnotationModel::toJson() const
         annotationObject.insert(QStringLiteral("pageIndex"), annotation.pageIndex);
         annotationObject.insert(QStringLiteral("text"), annotation.text);
         annotationObject.insert(QStringLiteral("color"), annotation.color.name(QColor::HexArgb));
+        annotationObject.insert(QStringLiteral("textColor"), annotation.textStyle.textColor.name(QColor::HexArgb));
+        annotationObject.insert(QStringLiteral("fontFamily"), annotation.textStyle.fontFamily);
+        annotationObject.insert(QStringLiteral("fontSize"), annotation.textStyle.fontSize);
         if (!annotation.binaryPayload.isEmpty()) {
             annotationObject.insert(QStringLiteral("binaryPayload"), QString::fromLatin1(annotation.binaryPayload.toBase64()));
         }
@@ -366,6 +433,9 @@ bool AnnotationModel::fromJson(const QJsonArray &annotationsArray)
         annotation.pageIndex = annotationObject.value(QStringLiteral("pageIndex")).toInt(-1);
         annotation.text = annotationObject.value(QStringLiteral("text")).toString();
         annotation.color = QColor(annotationObject.value(QStringLiteral("color")).toString(QStringLiteral("#6EFFEB3B")));
+        annotation.textStyle.textColor = QColor(annotationObject.value(QStringLiteral("textColor")).toString(QStringLiteral("#ff000000")));
+        annotation.textStyle.fontFamily = annotationObject.value(QStringLiteral("fontFamily")).toString(QStringLiteral("Helvetica"));
+        annotation.textStyle.fontSize = annotationObject.value(QStringLiteral("fontSize")).toDouble(12.0);
         annotation.binaryPayload = QByteArray::fromBase64(
             annotationObject.value(QStringLiteral("binaryPayload")).toString().toLatin1());
 
@@ -379,6 +449,7 @@ bool AnnotationModel::fromJson(const QJsonArray &annotationsArray)
         }
 
         if (annotation.pageIndex >= 0 && !annotation.pageRects.isEmpty()) {
+            annotation.textStyle = normalizedTextStyle(annotation.textStyle);
             m_annotations.append(annotation);
         }
     }

@@ -45,6 +45,57 @@ std::string toUtf8(const QString &text)
     return text.toUtf8().toStdString();
 }
 
+QString standardPdfFontAlias(const QString &fontFamily)
+{
+    const QString family = fontFamily.trimmed().toLower();
+    if (family.contains(QStringLiteral("courier"))) {
+        return QStringLiteral("/Cour");
+    }
+    if (family.contains(QStringLiteral("times"))) {
+        return QStringLiteral("/TiRo");
+    }
+    return QStringLiteral("/Helv");
+}
+
+QString normalizedPdfFontFamily(const QString &fontFamily)
+{
+    const QString family = fontFamily.trimmed();
+    if (family.contains(QStringLiteral("courier"), Qt::CaseInsensitive)) {
+        return QStringLiteral("Courier");
+    }
+    if (family.contains(QStringLiteral("times"), Qt::CaseInsensitive)) {
+        return QStringLiteral("Times New Roman");
+    }
+    return QStringLiteral("Helvetica");
+}
+
+QString defaultAppearanceString(const PdfAnnotation &annotation)
+{
+    const QColor textColor = annotation.textStyle.textColor.isValid() ? annotation.textStyle.textColor.toRgb() : QColor(Qt::black);
+    const double fontSize = annotation.textStyle.fontSize > 0.0 ? annotation.textStyle.fontSize : 12.0;
+    const QString fontAlias = standardPdfFontAlias(annotation.textStyle.fontFamily);
+    return QStringLiteral("%1 %2 %3 rg %4 %5 Tf")
+        .arg(QString::number(textColor.redF(), 'f', 3))
+        .arg(QString::number(textColor.greenF(), 'f', 3))
+        .arg(QString::number(textColor.blueF(), 'f', 3))
+        .arg(fontAlias)
+        .arg(QString::number(fontSize, 'f', 1));
+}
+
+QString defaultStyleString(const PdfAnnotation &annotation)
+{
+    const QColor textColor = annotation.textStyle.textColor.isValid() ? annotation.textStyle.textColor.toRgb() : QColor(Qt::black);
+    const QColor backgroundColor = annotation.color.isValid() ? annotation.color.toRgb() : QColor(Qt::white);
+    const QString family = normalizedPdfFontFamily(annotation.textStyle.fontFamily);
+    const double fontSize = annotation.textStyle.fontSize > 0.0 ? annotation.textStyle.fontSize : 12.0;
+
+    return QStringLiteral("font: %1pt '%2'; color: %3; background-color: %4;")
+        .arg(QString::number(fontSize, 'f', 1))
+        .arg(family)
+        .arg(textColor.name(QColor::HexRgb))
+        .arg(backgroundColor.name(QColor::HexRgb));
+}
+
 QPDFObjectHandle pdfReal(double value)
 {
     return QPDFObjectHandle::newReal(value, 3, true);
@@ -138,7 +189,12 @@ QPDFObjectHandle createMarkupAnnotation(QPDF &pdf, const PdfAnnotation &annotati
     case PdfAnnotationKind::FreeText:
         annot.replaceKey("/Subtype", QPDFObjectHandle::newName("/FreeText"));
         annot.replaceKey("/Contents", QPDFObjectHandle::newUnicodeString(toUtf8(annotation.text)));
-        annot.replaceKey("/DA", QPDFObjectHandle::newString("0 0 0 rg /Helv 12 Tf"));
+        annot.replaceKey("/DA", QPDFObjectHandle::newString(toUtf8(defaultAppearanceString(annotation))));
+        annot.replaceKey("/DS", QPDFObjectHandle::newUnicodeString(toUtf8(defaultStyleString(annotation))));
+        annot.replaceKey("/BS", QPDFObjectHandle::newDictionary({
+            {"/Type", QPDFObjectHandle::newName("/Border")},
+            {"/W", QPDFObjectHandle::newInteger(0)},
+        }));
         annot.replaceKey("/Q", QPDFObjectHandle::newInteger(0));
         break;
     case PdfAnnotationKind::Signature: {

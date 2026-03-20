@@ -41,6 +41,13 @@ enum class PdfAnnotationKind
     Signature
 };
 
+struct PdfTextStyle
+{
+    QColor textColor {Qt::black};
+    QString fontFamily {QStringLiteral("Helvetica")};
+    double fontSize {12.0};
+};
+
 struct PdfAnnotation
 {
     QString id;
@@ -48,6 +55,7 @@ struct PdfAnnotation
     int pageIndex {-1};
     QVector<QRectF> pageRects;
     QColor color {255, 235, 59, 110};
+    PdfTextStyle textStyle;
     QString text;
     QByteArray binaryPayload;
     bool selected {false};
@@ -59,6 +67,7 @@ struct PdfAnnotationOverlay
     PdfAnnotationKind kind {PdfAnnotationKind::Highlight};
     QVector<QRectF> imageRects;
     QColor color;
+    PdfTextStyle textStyle;
     QString text;
     QByteArray binaryPayload;
     bool selected {false};

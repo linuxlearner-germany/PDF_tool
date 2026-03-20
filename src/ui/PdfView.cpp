@@ -210,7 +210,11 @@ void PdfView::setAnnotationOverlays(const QVector<PdfAnnotationOverlay> &overlay
                 m_annotationItems.append(item);
 
                 auto *textItem = m_scene.addText(overlay.text);
-                textItem->setDefaultTextColor(Qt::black);
+                QFont textFont(overlay.textStyle.fontFamily);
+                textFont.setPointSizeF(std::max(1.0, overlay.textStyle.fontSize));
+                textItem->setFont(textFont);
+                textItem->setDefaultTextColor(
+                    overlay.textStyle.textColor.isValid() ? overlay.textStyle.textColor : Qt::black);
                 textItem->setTextWidth(std::max(24.0, rect.width() - 10.0));
                 textItem->setPos(rect.topLeft() + QPointF(5.0, 3.0));
                 textItem->setZValue(6.3);

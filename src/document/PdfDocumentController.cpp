@@ -33,6 +33,18 @@ constexpr double kZoomStep = 0.25;
 constexpr double kRedactionExportScale = 2.0;
 constexpr int kSidecarVersion = 2;
 
+QString normalizedPdfFontFamily(const QString &fontFamily)
+{
+    const QString family = fontFamily.trimmed();
+    if (family.contains(QStringLiteral("courier"), Qt::CaseInsensitive)) {
+        return QStringLiteral("Courier");
+    }
+    if (family.contains(QStringLiteral("times"), Qt::CaseInsensitive)) {
+        return QStringLiteral("Times New Roman");
+    }
+    return QStringLiteral("Helvetica");
+}
+
 void drawSearchableOcrTextLayer(QPainter &painter, const QImage &pageImage, const QSizeF &targetPageSize)
 {
     if (pageImage.isNull() || targetPageSize.isEmpty() || !OcrService::isAvailable()) {
@@ -461,10 +473,11 @@ bool PdfDocumentController::exportEditedPdf(const QString &outputFile, bool excl
                         imagePainter.drawRect(imageRect);
 
                         QFont font = imagePainter.font();
-                        const double pointSize = std::clamp(imageRect.height() * 0.18, 8.0, 20.0);
-                        font.setPointSizeF(pointSize);
+                        font.setFamily(normalizedPdfFontFamily(annotation.textStyle.fontFamily));
+                        const double pixelSize = std::max(1.0, annotation.textStyle.fontSize * scaleY);
+                        font.setPixelSize(qRound(pixelSize));
                         imagePainter.setFont(font);
-                        imagePainter.setPen(Qt::black);
+                        imagePainter.setPen(annotation.textStyle.textColor.isValid() ? annotation.textStyle.textColor : Qt::black);
                         imagePainter.drawText(imageRect.adjusted(6.0, 4.0, -6.0, -4.0),
                                               Qt::AlignLeft | Qt::AlignTop | Qt::TextWordWrap,
                                               annotation.text);
@@ -701,6 +714,16 @@ QString PdfDocumentController::selectedTextEditText() const
     return hasSelectedTextEditAnnotation() ? m_annotationModel.selectedAnnotationText() : QString();
 }
 
+PdfTextStyle PdfDocumentController::selectedTextEditStyle() const
+{
+    return hasSelectedTextEditAnnotation() ? m_annotationModel.selectedAnnotationTextStyle() : PdfTextStyle();
+}
+
+QColor PdfDocumentController::selectedTextEditBackgroundColor() const
+{
+    return hasSelectedTextEditAnnotation() ? m_annotationModel.selectedAnnotationColor() : QColor();
+}
+
 bool PdfDocumentController::hasSelectedSignatureAnnotation() const
 {
     return m_annotationModel.hasSelectedAnnotation()
@@ -915,7 +938,11 @@ void PdfDocumentController::addNoteAnnotationAt(const QPointF &imagePoint, const
     emit statusMessageChanged(QStringLiteral("Textnotiz hinzugefügt."));
 }
 
-void PdfDocumentController::addFreeTextAt(const QPointF &imagePoint, const QString &text)
+void PdfDocumentController::addFreeTextAt(
+    const QPointF &imagePoint,
+    const QString &text,
+    const PdfTextStyle &style,
+    const QColor &backgroundColor)
 {
     if (!hasDocument() || text.trimmed().isEmpty()) {
         return;
@@ -923,7 +950,7 @@ void PdfDocumentController::addFreeTextAt(const QPointF &imagePoint, const QStri
 
     const QPointF pagePoint = imagePointToPagePoint(imagePoint);
     const QRectF textRect(pagePoint.x(), pagePoint.y(), 180.0, 48.0);
-    if (!m_annotationModel.addFreeText(m_currentPageIndex, textRect, text)) {
+    if (!m_annotationModel.addFreeText(m_currentPageIndex, textRect, text, style, backgroundColor)) {
         return;
     }
 
@@ -934,13 +961,16 @@ void PdfDocumentController::addFreeTextAt(const QPointF &imagePoint, const QStri
     emit statusMessageChanged(QStringLiteral("Textfeld hinzugefügt."));
 }
 
-void PdfDocumentController::replaceSelectedText(const QString &text)
+void PdfDocumentController::replaceSelectedText(
+    const QString &text,
+    const PdfTextStyle &style,
+    const QColor &backgroundColor)
 {
     if (!hasAreaSelection() || text.trimmed().isEmpty()) {
         return;
     }
 
-    if (!m_annotationModel.addFreeText(m_currentPageIndex, m_lastSelectionPageRect, text)) {
+    if (!m_annotationModel.addFreeText(m_currentPageIndex, m_lastSelectionPageRect, text, style, backgroundColor)) {
         return;
     }
 
@@ -1151,14 +1181,19 @@ void PdfDocumentController::updateSelectedNoteText(const QString &text)
     emit statusMessageChanged(QStringLiteral("Textnotiz aktualisiert."));
 }
 
-void PdfDocumentController::updateSelectedTextEdit(const QString &text)
+void PdfDocumentController::updateSelectedTextEdit(
+    const QString &text,
+    const PdfTextStyle &style,
+    const QColor &backgroundColor)
 {
     const QString annotationId = m_annotationModel.selectedAnnotationId();
     if (annotationId.isEmpty()) {
         return;
     }
 
-    if (!m_annotationModel.setText(annotationId, text)) {
+    if (!m_annotationModel.setText(annotationId, text)
+        || !m_annotationModel.setFreeTextStyle(annotationId, style)
+        || !m_annotationModel.setColor(annotationId, backgroundColor)) {
         return;
     }
 
@@ -1635,6 +1670,7 @@ void PdfDocumentController::emitOverlayState()
         overlay.kind = annotation.kind;
         overlay.imageRects = pageRectsToImageRects(annotation.pageRects);
         overlay.color = annotation.color;
+        overlay.textStyle = annotation.textStyle;
         overlay.text = annotation.text;
         overlay.binaryPayload = annotation.binaryPayload;
         overlay.selected = annotation.selected;

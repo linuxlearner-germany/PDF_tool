@@ -1,0 +1,4 @@
+build/
+build-local/
+build-ninja/
+cmake-build-debug/

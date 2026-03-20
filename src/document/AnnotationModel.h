@@ -17,12 +17,18 @@ public:
     bool addHighlightFromSelection(const SelectionModel &selection);
     bool addRectangle(int pageIndex, const QRectF &pageRect);
     bool addNote(int pageIndex, const QRectF &pageRect, const QString &text);
-    bool addFreeText(int pageIndex, const QRectF &pageRect, const QString &text);
+    bool addFreeText(
+        int pageIndex,
+        const QRectF &pageRect,
+        const QString &text,
+        const PdfTextStyle &style = PdfTextStyle(),
+        const QColor &backgroundColor = QColor(255, 255, 255, 230));
     bool addSignature(int pageIndex, const QRectF &pageRect, const QByteArray &imageBytes);
 
     bool remove(const QString &annotationId);
     bool setColor(const QString &annotationId, const QColor &color);
     bool setText(const QString &annotationId, const QString &text);
+    bool setFreeTextStyle(const QString &annotationId, const PdfTextStyle &style);
     bool translateSelected(const QPointF &pageDelta);
     bool resizeSelectedFreeText(const QSizeF &pageDelta, const QSizeF &minimumSize = QSizeF(48.0, 24.0));
     bool remapPages(const QVector<int> &newOrder);
@@ -32,7 +38,9 @@ public:
     bool hasSelectedAnnotation() const;
     bool hasAnnotationKind(PdfAnnotationKind kind) const;
     PdfAnnotationKind selectedAnnotationKind() const;
+    QColor selectedAnnotationColor() const;
     QString selectedAnnotationText() const;
+    PdfTextStyle selectedAnnotationTextStyle() const;
 
     QVector<PdfAnnotation> annotations() const;
     QVector<PdfAnnotation> annotationsForPage(int pageIndex) const;

@@ -69,6 +69,8 @@ public:
     QString selectedNoteText() const;
     bool hasSelectedTextEditAnnotation() const;
     QString selectedTextEditText() const;
+    PdfTextStyle selectedTextEditStyle() const;
+    QColor selectedTextEditBackgroundColor() const;
     bool hasSelectedSignatureAnnotation() const;
     bool selectedSignatureAnnotationData(int &pageIndex, QRectF &pageRect, QByteArray &imageData) const;
     bool hasSelectedMovableAnnotation() const;
@@ -94,8 +96,15 @@ public slots:
     void addHighlightAnnotationFromSelection();
     void addRectangleAnnotationFromSelection();
     void addNoteAnnotationAt(const QPointF &imagePoint, const QString &noteText);
-    void addFreeTextAt(const QPointF &imagePoint, const QString &text);
-    void replaceSelectedText(const QString &text);
+    void addFreeTextAt(
+        const QPointF &imagePoint,
+        const QString &text,
+        const PdfTextStyle &style = PdfTextStyle(),
+        const QColor &backgroundColor = QColor(255, 255, 255, 230));
+    void replaceSelectedText(
+        const QString &text,
+        const PdfTextStyle &style = PdfTextStyle(),
+        const QColor &backgroundColor = QColor(255, 255, 255, 230));
     void addSignatureFromImageAt(const QPointF &imagePoint, const QImage &signatureImage);
     void addSignatureFromImageToSelection(const QImage &signatureImage);
     void moveSelectedSignatureBy(const QPointF &imageDelta);
@@ -105,7 +114,10 @@ public slots:
     void deleteSelectedOverlay();
     void setSelectedAnnotationColor(const QColor &color);
     void updateSelectedNoteText(const QString &text);
-    void updateSelectedTextEdit(const QString &text);
+    void updateSelectedTextEdit(
+        const QString &text,
+        const PdfTextStyle &style = PdfTextStyle(),
+        const QColor &backgroundColor = QColor(255, 255, 255, 230));
     void saveDocumentState();
     void undo();
     void redo();
