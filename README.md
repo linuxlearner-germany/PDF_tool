@@ -1,90 +1,181 @@
 # 🧩 PDFTool
 
-<p align="center">
-  <img src="images/Screenshot_with_dokument.png" width="1200"/>
-</p>
+![PDFTool Screenshot](images/Screenshot_with_dokument.png)
 
-<p align="center">
-  <b>Local-first PDF editor for Linux – OCR, Annotation and Redaction</b>
-</p>
+**Local-first PDF editor for Linux – built for viewing, annotating, redacting and exporting PDF documents with OCR support.**
 
 ---
 
 ## 🚀 Overview
 
-PDFTool is a local-first PDF editor designed for Linux desktop workflows.
+PDFTool is a Linux desktop application for working with PDF files in a practical, local-first workflow.
 
-It focuses on:
+The goal of this project is to provide a PDF tool that is not limited to simple viewing, but also supports editing-related workflows such as annotations, OCR, redaction and export. The application is designed for users who want to keep full control over their files and process documents locally instead of relying on cloud-based services.
 
-- 📄 Reading and navigating PDFs  
-- ✏️ Annotation and editing  
-- 🔒 Redaction (data masking)  
-- 🔍 OCR (text extraction)  
-- 📤 Exporting modified documents  
-
-👉 All processing happens locally – no cloud dependency.
+This project is especially focused on Linux desktop environments and is being developed as a real-world software project using modern C++ tooling and a CMake-based workflow.
 
 ---
 
-## 📸 Screenshots
+## 🎯 Project Goals
 
-<p align="center">
-  <img src="images/Screenshot_with_dokument.png" width="48%"/>
-  <img src="images/Screenshot_without_dokument.png" width="48%"/>
-</p>
+PDFTool is being built with the following goals in mind:
+
+- Provide a usable PDF workflow directly on Linux
+- Support annotation and document interaction
+- Enable OCR-based text extraction
+- Offer redaction and export functionality
+- Keep all processing local on the user’s machine
+- Create a maintainable and extendable C++/Qt codebase
+- Learn and apply practical desktop software engineering concepts
+
+---
+
+## ✨ Main Capabilities
+
+The current direction of the project includes support for:
+
+- 📄 Opening and navigating PDF files
+- 🔎 Searching within PDF documents
+- ✏️ Annotation and editing-related workflows
+- 📝 Text-related interaction with documents
+- 🔒 Redaction / black-out workflows
+- 🔍 OCR support for extracting text from pages or selections
+- 📤 Exporting processed documents
+- 🖥️ Linux desktop integration
+- 📦 Debian package distribution via `.deb`
+
+---
+
+## 📸 Screenshot
+
+### 🧩 Empty workspace
+
+This screenshot shows the clean default UI before a document is loaded.
+
+![Without Document](images/Screenshot_without_dokument.png)
 
 ---
 
 ## 🧠 Key Features
 
-- PDF viewing & navigation  
-- Annotation & editing  
-- Redaction (data masking)  
-- OCR with Tesseract  
-- Local processing (no cloud)  
+### PDF Viewing & Navigation
+- Load and display PDF documents
+- Navigate through document pages
+- Work in a desktop-oriented interface
+- Focus on usability for Linux users
+
+### Annotation & Editing Workflow
+- Tools for interacting with PDF content
+- Editing-oriented actions through the GUI
+- Visual workflow for document processing
+
+### OCR Support
+- OCR functionality via **Tesseract**
+- Intended for extracting text from PDF content
+- Useful for scanned or image-based documents
+
+### Redaction
+- Black-out / redaction workflow for hiding sensitive information
+- Export-oriented processing after redaction
+
+### Local-First Processing
+- No cloud dependency
+- Files stay on the user’s system
+- Better privacy and full local control
+
+### Linux Packaging
+- Project includes a Debian package build/output
+- Makes installation easier on Debian-based systems
 
 ---
 
 ## 🏗️ Architecture
 
+PDFTool is designed around a desktop application architecture with a clear separation between UI, PDF rendering and document-processing components.
+
 ### Core Components
 
-- **Qt 6** → UI Layer  
-- **Poppler** → PDF rendering  
-- **Tesseract** → OCR engine  
-- **qpdf** → PDF processing  
+- **Qt 6** → User interface and desktop application framework  
+- **Poppler** → PDF rendering and document handling  
+- **Tesseract** → OCR engine for text extraction  
+- **qpdf** → Additional PDF processing support  
+
+### High-Level Workflow
+
+User → Qt UI → PDF Processing Layer → Export / Output
+
+### Internal Design Idea
+
+The application follows a practical layered approach:
+
+1. **User Interface Layer**  
+   Handles windows, controls, actions, menus and interaction.
+
+2. **Document Layer**  
+   Responsible for loading, displaying and navigating PDF files.
+
+3. **Processing Layer**  
+   Handles OCR, redaction, editing-related features and export workflows.
+
+4. **Output Layer**  
+   Produces saved/exported results after processing.
+
+This structure helps keep the project modular and easier to extend in the future.
 
 ---
 
-### Workflow
+## 🛠️ Development Environment
 
-User → Qt UI → Processing Layer → Export Pipeline  
+This project is primarily developed in a Linux environment and uses professional C++ development tooling.
 
-- UI handles interaction  
-- Poppler renders PDF  
-- Editing is handled via overlays  
-- Export writes changes into a new PDF  
+### Main Development Setup
+
+- **IDE:** CLion (JetBrains)
+- **Build system:** CMake
+- **Platform:** Linux / Debian
+- **Language:** C++
+- **Framework:** Qt 6
+
+### Why CLion
+
+PDFTool is developed with **CLion**, which is used as the primary IDE for the project.
+
+CLion is especially useful here because it provides:
+
+- Integrated **CMake** support
+- Good C++ code navigation
+- Debugging tools
+- Refactoring support
+- Static analysis support
+- Efficient management of a multi-file C++ project
+
+Using CLion also reflects that this project is developed with a more professional desktop/software-engineering workflow rather than as a minimal experiment.
 
 ---
 
 ## ⚙️ Requirements
 
-- Linux (Debian recommended)  
-- Qt 6  
-- Poppler  
-- (Optional) Tesseract  
-- (Optional) qpdf  
+To build or run PDFTool from source, the following components are relevant:
+
+- Linux (recommended: Debian-based distribution)
+- Qt 6
+- Poppler
+- CMake
+- C++ compiler
+- Optional:
+  - Tesseract
+  - qpdf
+
+Depending on your system, package names may vary.
 
 ---
 
-## 🚀 Build
+## 📦 Installation (.deb)
+
+A Debian package is included/provided for easier installation on Debian-based Linux systems.
+
+### Install via `.deb`
 
 ```bash
-git clone https://github.com/linuxlearner-germany/PDF_tool
-cd PDF_tool
-
-mkdir build
-cd build
-
-cmake ..
-make
+sudo dpkg -i dist/pdf-tool_0.1.0_amd64.deb
+sudo apt-get install -f
