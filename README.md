@@ -1,12 +1,12 @@
 # 🧩 PDFTool
 
 <p align="center">
-  <img src="images/Screenshot_with_dokument.png" width="1000"/>
+  <img src="images/Screenshot_with_dokument.png" width="1200"/>
 </p>
 
-Linux desktop application for viewing, annotating, redacting and exporting PDF files.
-
-Built with **Qt 6**, **Poppler**, and optional **Tesseract / qpdf**.
+<p align="center">
+  <b>Local-first PDF editor for Linux – OCR, Annotation and Redaction</b>
+</p>
 
 ---
 
@@ -28,65 +28,20 @@ It focuses on:
 
 ## 📸 Screenshots
 
-### 📄 PDF loaded
-
-Interface showing document navigation, editing tools and OCR features.
-
 <p align="center">
-  <img src="images/Screenshot_with_dokument.png" width="900"/>
+  <img src="images/Screenshot_with_dokument.png" width="48%"/>
+  <img src="images/Screenshot_without_dokument.png" width="48%"/>
 </p>
 
 ---
 
-### 🧩 Empty workspace
+## 🧠 Key Features
 
-Clean workspace before loading a document.
-
-<p align="center">
-  <img src="images/Screenshot_without_dokument.png" width="900"/>
-</p>
-
----
-
-## 🧠 Features
-
-### 📖 Viewer & Navigation
-- Fast PDF rendering via Poppler  
-- Zoom & scroll support  
-- Page thumbnails & bookmarks  
-- Search with highlighting  
-
----
-
-### ✏️ Editing & Annotation
-- Text selection & copy  
-- Highlight annotations  
-- Rectangle annotations  
-- Free text notes  
-- Visual text replacement  
-
----
-
-### 🔒 Redaction
-- Mark areas for redaction  
-- Black overlay masking  
-- Export as permanently redacted PDF  
-
----
-
-### 🔍 OCR (Optional)
-- Page-level OCR  
-- Selection-based OCR  
-- Powered by Tesseract  
-- Export searchable PDFs  
-
----
-
-### 📦 Additional Features
-- Merge PDFs  
-- Split PDFs  
-- Handle encrypted PDFs  
-- Export modified documents  
+- PDF viewing & navigation  
+- Annotation & editing  
+- Redaction (data masking)  
+- OCR with Tesseract  
+- Local processing (no cloud)  
 
 ---
 
