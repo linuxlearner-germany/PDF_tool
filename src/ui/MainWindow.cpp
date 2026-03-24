@@ -2178,7 +2178,13 @@ void MainWindow::createCentralLayout()
 
 void MainWindow::createInspectorDock()
 {
+    constexpr int kInspectorMinimumWidth = 280;
+    constexpr int kInspectorPreferredWidth = 340;
+    constexpr int kInspectorMaximumWidth = 420;
+    constexpr int kInspectorEditorMinimumHeight = 120;
+
     m_inspectorStack = new QStackedWidget(this);
+    m_inspectorStack->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Expanding);
 
     m_inspectorEmptyPage = new QWidget(this);
     auto *emptyLayout = new QVBoxLayout(m_inspectorEmptyPage);
@@ -2192,6 +2198,9 @@ void MainWindow::createInspectorDock()
     auto *textLayout = new QVBoxLayout(m_inspectorTextPage);
     auto *textForm = new QFormLayout();
     m_inspectorTextEdit = new QTextEdit(m_inspectorTextPage);
+    m_inspectorTextEdit->setLineWrapMode(QTextEdit::WidgetWidth);
+    m_inspectorTextEdit->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    m_inspectorTextEdit->setMinimumHeight(kInspectorEditorMinimumHeight);
     m_inspectorFontFamilyBox = new QComboBox(m_inspectorTextPage);
     m_inspectorFontFamilyBox->addItems(supportedPdfFontFamilies());
     m_inspectorFontSizeSpin = new QSpinBox(m_inspectorTextPage);
@@ -2213,6 +2222,9 @@ void MainWindow::createInspectorDock()
     auto *noteLayout = new QVBoxLayout(m_inspectorNotePage);
     auto *noteForm = new QFormLayout();
     m_inspectorNoteEdit = new QTextEdit(m_inspectorNotePage);
+    m_inspectorNoteEdit->setLineWrapMode(QTextEdit::WidgetWidth);
+    m_inspectorNoteEdit->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    m_inspectorNoteEdit->setMinimumHeight(kInspectorEditorMinimumHeight);
     m_inspectorNoteColorButton = new QPushButton(m_inspectorNotePage);
     noteForm->addRow(QStringLiteral("Kommentar:"), m_inspectorNoteEdit);
     noteForm->addRow(QStringLiteral("Farbe:"), m_inspectorNoteColorButton);
@@ -2275,9 +2287,11 @@ void MainWindow::createInspectorDock()
     m_inspectorDock->setObjectName(QStringLiteral("InspectorDock"));
     m_inspectorDock->setAllowedAreas(Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea);
     m_inspectorDock->setFeatures(QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable);
-    m_inspectorDock->setMinimumWidth(280);
+    m_inspectorDock->setMinimumWidth(kInspectorMinimumWidth);
+    m_inspectorDock->setMaximumWidth(kInspectorMaximumWidth);
     m_inspectorDock->setWidget(m_inspectorStack);
     addDockWidget(Qt::RightDockWidgetArea, m_inspectorDock);
+    resizeDocks({m_inspectorDock}, {kInspectorPreferredWidth}, Qt::Horizontal);
 }
 
 void MainWindow::refreshInspector()

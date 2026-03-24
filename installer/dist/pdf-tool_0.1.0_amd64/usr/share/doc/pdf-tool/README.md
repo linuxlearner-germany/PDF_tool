@@ -1,263 +1,169 @@
-# PDFTool
+# 🧩 PDFTool
 
-Desktop-PDF-Viewer und PDF-Bearbeitungstool auf Basis von Qt 6, CMake, Poppler und qpdf.
+![PDFTool Screenshot](images/Screenshot_with_dokument.png)
 
-PDFTool ist ein pragmatisches Linux-Desktop-Projekt mit Fokus auf produktive PDF-Arbeit:
-- PDFs oeffnen und lesen
-- Seiten, Outline und Suche nutzen
-- markieren, kommentieren und redigieren
-- Text sichtbar ersetzen
-- OCR auf Seiten oder Bereichen ausfuehren
-- Unterschriften als Bild einfuegen
-- neue bearbeitete PDFs exportieren
+<p align="center">
+  <b>Local-first PDF editor for Linux – OCR, Annotation, Redaction</b>
+</p>
 
-## Status
+<p align="center">
+  <img src="https://skillicons.dev/icons?i=cpp,qt,cmake,linux,bash,git" />
+</p>
 
-Das Projekt ist deutlich ueber ein MVP hinaus und laeuft aktuell als fortgeschrittener Desktop-Viewer/Editor mit Overlay-basierter Bearbeitung und Exportpfaden fuer dauerhaft veraenderte PDFs.
+---
 
-Wichtig:
-- direkte semantische Bearbeitung des internen PDF-Textstroms ist nicht implementiert
-- Textaenderungen, Signaturen, Formularwerte und Redactions werden ueber Overlays verwaltet
-- mit `Bearbeitetes PDF exportieren...` werden diese Aenderungen dauerhaft in ein neues PDF eingebrannt
+## 🚀 Overview
 
-## Features
+PDFTool is a Linux desktop application designed for working with PDF files in a **local-first workflow**.
 
-### Dokument und Navigation
+Unlike simple viewers, it focuses on real document workflows such as annotation, OCR, redaction and export — all processed locally without cloud dependency.
 
-- PDF oeffnen
-- Rendern ueber Poppler
-- Zoom
-- Scrollen und Seitenwechsel per Mausrad
-- `Ctrl + Mausrad` fuer Zoom
-- Seitenleiste mit Thumbnails
-- aktive Seite in der Seitenleiste hervorgehoben
-- Outline / Bookmarks
-- Metadaten-Dialog
-- Drucken
+This project is built as a **practical C++/Qt desktop application**, using modern tooling and a structured architecture.
 
-### Auswahl, Suche und Bearbeitung
+---
 
-- Rechteckauswahl
-- Textselektion innerhalb einer Auswahl
-- `Ctrl+C` fuer Copy
-- dokumentweite Suche mit Highlighting
-- Highlight-Annotationen
-- Rechteck-Annotationen
-- Textnotizen
-- freie Textfelder
-- sichtbares Text-Ersetzen innerhalb einer Auswahl
-- Farbaenderung und Loeschen fuer ausgewaehlte Annotationen
+## 🎯 Project Goals
 
-### Formulare
+- Provide a complete PDF workflow on Linux  
+- Enable annotation and document interaction  
+- Support OCR-based text extraction  
+- Offer redaction and export functionality  
+- Keep all processing local (privacy-first)  
+- Build a maintainable and scalable C++/Qt codebase  
+- Apply real-world desktop software engineering practices  
 
-- Textfelder aus PDFs auslesen
-- Checkboxen aus PDFs auslesen
-- Formularwerte im Viewer bearbeiten
-- Formularzustand per Sidecar-Datei sichern
+---
 
-### Redaction
+## ⚙️ Tech Stack
 
-- Auswahlbereiche schwaerzen
-- schwarze Redaction-Overlays im Viewer
-- Export als dauerhaft geschwaerztes PDF
+<p>
+  <img src="https://skillicons.dev/icons?i=cpp,qt,cmake,linux,bash,git" />
+</p>
 
-### OCR
+- **C++** – Core application logic  
+- **Qt 6** – GUI framework  
+- **CMake** – Build system  
+- **Linux (Debian)** – Target platform  
+- **Poppler** – PDF rendering  
+- **Tesseract** – OCR engine  
+- **qpdf** – PDF processing  
 
-- OCR fuer aktuelle Seite
-- OCR fuer Auswahlbereich
-- OCR-Ergebnisdialog mit Copy-Funktion
-- lokale Ausfuehrung ueber `tesseract`
+---
 
-### Unterschriften
+## ✨ Capabilities
 
-- Unterschrift als Bilddatei einfuegen
-- Platzierung auf Auswahl oder an Klickposition
-- Persistenz ueber Sidecar-Datei
-- Export in bearbeitetes PDF
+- 📄 Open and navigate PDF documents  
+- 🔎 Search within documents  
+- ✏️ Annotation and editing workflows  
+- 🔍 OCR (via Tesseract)  
+- 🔒 Redaction / black-out functionality  
+- 📤 Export processed documents  
+- 🖥️ Native Linux desktop integration  
+- 📦 Debian package distribution (.deb)  
 
-### PDF-Operationen
+---
 
-- PDFs zusammenfuehren
-- PDFs aufteilen
-- passwortgeschuetzte PDFs oeffnen
-- verschluesseltes PDF exportieren
+## 📸 Screenshots
 
-### UI
+### 📄 With document loaded
 
-- ueberarbeitete Desktop-Oberflaeche
-- umschaltbarer Light/Dark Mode
-- Theme-Auswahl wird gespeichert
-- Statusleiste mit Dokument-, Modus-, Seiten-, Zoom- und Suchstatus
+![With Document](images/Screenshot_with_dokument.png)
 
-## Architektur
+---
 
-Die bestehende Architektur ist bewusst getrennt gehalten:
+### 🧩 Empty workspace
 
-- `src/ui`
-  UI-Komponenten wie `MainWindow`, `PdfView`, Thumbnail-Liste
-- `src/document`
-  Controller und Dokumentmodelle fuer Annotationen, Formulare, Suche, Redactions
-- `src/rendering`
-  Render-Backend ueber Poppler
-- `src/operations`
-  qpdf-basierte Operationen wie Merge, Split, Verschluesselung
-- `src/services`
-  Zusatzdienste wie OCR
+![Without Document](images/Screenshot_without_dokument.png)
 
-Wichtige Kernklassen:
-- `PdfDocumentController`
-- `PopplerAdapter`
-- `PdfView`
-- `AnnotationModel`
-- `FormFieldModel`
-- `RedactionModel`
-- `OcrService`
+---
 
-## Sidecar-Dateien
+## 🧠 Key Features
 
-PDFTool speichert nicht alle Aenderungen direkt ins Original-PDF. Stattdessen wird zusaetzlich eine Sidecar-Datei neben dem PDF abgelegt:
+### 📖 PDF Viewing & Navigation
+- Load and display PDF documents  
+- Navigate pages efficiently  
+- Desktop-focused UI workflow  
 
-```text
-dein_dokument.pdf.annotations.json
-```
+### ✏️ Annotation & Editing
+- Interactive document tools  
+- GUI-based editing workflows  
+- Visual document interaction  
 
-Darueber werden aktuell unter anderem gespeichert:
-- Annotationen
-- freie Textfelder
-- Signaturen
-- Formularwerte
-- Redactions
+### 🔍 OCR Support
+- Powered by **Tesseract**  
+- Extract text from scanned PDFs  
+- Page and selection-based OCR  
 
-## Voraussetzungen
+### 🔒 Redaction
+- Hide sensitive data  
+- Black-out areas in documents  
+- Export redacted versions  
 
-### Pflichtabhaengigkeiten
+### 🔐 Local-First Design
+- No cloud dependency  
+- Full control over data  
+- Privacy-focused workflow  
 
-Beispiel fuer Debian/Ubuntu:
+---
 
-```bash
-sudo apt install \
-  cmake \
-  ninja-build \
-  g++ \
-  qt6-base-dev \
-  libpoppler-qt6-dev \
-  libqpdf-dev \
-  libjpeg62-turbo-dev \
-  extra-cmake-modules \
-  zlib1g-dev
-```
+## 🏗️ Architecture
 
-### Optionale Abhaengigkeiten
+### Core Components
 
-Fuer OCR:
+- **Qt 6** → UI Layer  
+- **Poppler** → PDF rendering  
+- **Tesseract** → OCR  
+- **qpdf** → PDF processing  
 
-```bash
-sudo apt install tesseract-ocr tesseract-ocr-deu tesseract-ocr-eng
-```
+---
 
-## Build
+### Workflow
 
-### Build gegen Systempakete
+---
 
-```bash
-cmake -S . -B build -G Ninja
-cmake --build build
-./build/PDFTool
-```
+### Layers
 
-### Build gegen lokale Dependencies
+1. **UI Layer** – user interaction  
+2. **Document Layer** – PDF handling  
+3. **Processing Layer** – OCR, editing, redaction  
+4. **Output Layer** – export  
 
-Das Projekt kann auch mit der vorhandenen `.localdeps`-Struktur gebaut werden:
+---
+
+## 🛠️ Development Environment
+
+- **IDE:** CLion (JetBrains)  
+- **Build System:** CMake  
+- **Platform:** Linux (Debian)  
+- **Language:** C++  
+- **Framework:** Qt 6  
+
+CLion is used for:
+
+- CMake integration  
+- Debugging  
+- Refactoring  
+- Managing larger C++ projects  
+
+---
+
+## ⚙️ Requirements
+
+- Linux (Debian recommended)  
+- Qt 6  
+- Poppler  
+- CMake  
+- C++ compiler  
+
+Optional:
+
+- Tesseract  
+- qpdf  
+
+---
+
+## 📦 Installation (.deb)
 
 ```bash
-cmake -S . -B build-local -G Ninja
-cmake --build build-local
-./build-local/PDFTool
-```
-
-## Bedienung
-
-### Wichtige Shortcuts
-
-- `Ctrl+O` PDF oeffnen
-- `Ctrl+P` drucken
-- `Ctrl+F` Suche fokussieren
-- `Ctrl+C` Text kopieren
-- `Ctrl+Mausrad` zoomen
-- `PageUp` vorherige Seite
-- `PageDown` naechste Seite
-- `Delete` ausgewaehltes Overlay loeschen
-- `F3` naechster Treffer
-- `Shift+F3` vorheriger Treffer
-
-### Typischer Workflow
-
-1. PDF oeffnen
-2. Bereich auswaehlen
-3. je nach Bedarf:
-   - Text hervorheben
-   - Text ersetzen
-   - Redaction markieren
-   - OCR auf Auswahl ausfuehren
-   - Signatur in Auswahl platzieren
-4. `Bearbeitetes PDF exportieren...` oder `Geschwaerztes PDF exportieren...`
-
-## Exportmodi
-
-### Bearbeitetes PDF exportieren
-
-Erzeugt ein neues PDF mit eingebrannten:
-- Text-Overlays
-- Signaturen
-- Formularwerten
-- Annotationen
-- Redactions
-
-### Geschwaerztes PDF exportieren
-
-Erzeugt ein neues PDF, bei dem Redactions dauerhaft schwarz ausgegeben werden.
-
-## Bekannte Grenzen
-
-- keine echte semantische PDF-Textbearbeitung mit Reflow
-- keine kryptografischen PDF-Signaturen
-- OCR erzeugt aktuell keinen echten durchsuchbaren PDF-Textlayer
-- Formularwerte werden aktuell nicht ins Original-PDF zurueckgeschrieben
-- Annotationen werden nicht als native PDF-Annotationen gespeichert, sondern per Sidecar verwaltet
-
-## Roadmap
-
-Sinnvolle naechste Schritte:
-
-- echte PDF-Annotation-Writes
-- OCR-Textlayer im Export
-- digitale Signaturen / Zertifikate
-- Drag/Resize fuer Textfelder und Signaturen
-- Undo/Redo
-- Performance-Optimierung fuer grosse PDFs
-
-## Entwicklung
-
-Das Projekt wurde schrittweise erweitert, ohne die Grundarchitektur neu zu schreiben. Ziel ist ein sauberer Ausbau statt eines Voll-Rewrites.
-
-Wenn du am Projekt weiterarbeiten willst, sind diese Dateien die wichtigsten Einstiegsstellen:
-
-- `src/ui/MainWindow.cpp`
-- `src/ui/PdfView.cpp`
-- `src/document/PdfDocumentController.cpp`
-- `src/rendering/PopplerAdapter.cpp`
-- `src/operations/QPdfOperations.cpp`
-
-## Haftungsausschluss
-
-Die Nutzung dieser Software erfolgt auf eigene Verantwortung.
-
-Ich uebernehme keine Haftung fuer:
-- Datenverlust
-- beschaedigte oder unbrauchbar gewordene PDF-Dateien
-- fehlerhafte OCR-Ergebnisse
-- fehlerhafte Exportergebnisse
-- Sicherheitsluecken, Sicherheitsfehler oder sonstige Schwachstellen
-- rechtliche oder technische Folgen durch den Einsatz der Software
-
-Insbesondere bei Bearbeitung, Redaction, OCR, Verschluesselung, Signaturen und Exporten sollte die Software nicht ohne eigene Pruefung in produktiven oder rechtlich sensiblen Workflows eingesetzt werden.
+sudo dpkg -i dist/pdf-tool_0.1.0_amd64.deb
+sudo apt-get install -f
