@@ -11,14 +11,21 @@
 - Architektur-Split erweitert:
   - `MainWindowFileWorkflows.cpp`
   - `MainWindowDialogWorkflows.cpp`
-  - `PdfDocumentControllerSelection.cpp`
-  - `PdfDocumentControllerSearch.cpp`
+  - `MainWindowActions.cpp`
+  - `SelectionService`
+  - `SearchService`
+- Build-/Setup-Helfer ergaenzt:
+  - `scripts/configure.sh`
+  - `scripts/build.sh`
+- Neue Service-Tests:
+  - `SearchServiceTests`
+  - `SelectionServiceTests`
 - OCR-Session-Invalidierung bei Dokumentwechsel ergaenzt.
 - `cmake --build cmake-build-debug`
   - fehlgeschlagen, weil im Build-Tree kein nutzbares `Makefile` vorhanden war
 - `cmake -S . -B cmake-build-debug`
   - fehlgeschlagen, weil auf dem System kein `Qt6Config.cmake` gefunden wurde
-  - konkrete Meldung: `Qt6_DIR:PATH=Qt6_DIR-NOTFOUND`
+  - konkrete Meldung: `Could not find a package configuration file provided by "Qt6"`
 - vorhandene Paket-Binary gestartet:
   - `./installer/dist/pdf-tool_0.1.0_amd64/opt/pdftool/bin/PDFTool`
   - Prozess lief lokal am 2026-04-18 erneut an und erzeugte keinen sofortigen Fehleroutput

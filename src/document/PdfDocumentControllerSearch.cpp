@@ -1,5 +1,6 @@
 #include "document/PdfDocumentController.h"
 
+#include "document/SearchService.h"
 #include "rendering/PdfRenderEngine.h"
 
 void PdfDocumentController::setSearchQuery(const QString &query)
@@ -8,62 +9,59 @@ void PdfDocumentController::setSearchQuery(const QString &query)
         return;
     }
 
-    const QString trimmedQuery = query.trimmed();
-    if (trimmedQuery.isEmpty()) {
-        clearSearch();
-        return;
-    }
-
     emit busyStateChanged(true, QStringLiteral("Suche läuft..."));
-    m_searchModel.setResults(trimmedQuery, m_renderEngine->search(trimmedQuery));
+    const SearchNavigationResult result = m_searchService->setQuery(*m_renderEngine, query);
     emit busyStateChanged(false, QString());
-    if (!m_searchModel.hasResults()) {
+    if (!result.hasResults) {
         emitOverlayState();
-        emitSearchState(QStringLiteral("Keine Treffer für \"%1\".").arg(trimmedQuery));
+        emitSearchState(result.fallbackMessage.isEmpty() ? QStringLiteral("Keine aktive Suche.") : result.fallbackMessage);
         return;
     }
 
-    if (const PdfSearchHit *hit = m_searchModel.currentHit()) {
-        if (hit->pageIndex != m_currentPageIndex) {
-            m_currentPageIndex = hit->pageIndex;
-            renderCurrentPage();
-        } else {
-            emitOverlayState();
-        }
+    if (result.targetPageIndex != m_currentPageIndex) {
+        m_currentPageIndex = result.targetPageIndex;
+        renderCurrentPage();
+    } else {
+        emitOverlayState();
     }
-
     emitSearchState();
 }
 
 void PdfDocumentController::findNext()
 {
-    if (const PdfSearchHit *hit = m_searchModel.next()) {
-        if (hit->pageIndex != m_currentPageIndex) {
-            m_currentPageIndex = hit->pageIndex;
-            renderCurrentPage();
-        } else {
-            emitOverlayState();
-        }
-        emitSearchState();
+    const SearchNavigationResult result = m_searchService->findNext();
+    if (!result.hasResults) {
+        return;
     }
+
+    if (result.targetPageIndex != m_currentPageIndex) {
+        m_currentPageIndex = result.targetPageIndex;
+        renderCurrentPage();
+    } else {
+        emitOverlayState();
+    }
+    emitSearchState();
 }
 
 void PdfDocumentController::findPrevious()
 {
-    if (const PdfSearchHit *hit = m_searchModel.previous()) {
-        if (hit->pageIndex != m_currentPageIndex) {
-            m_currentPageIndex = hit->pageIndex;
-            renderCurrentPage();
-        } else {
-            emitOverlayState();
-        }
-        emitSearchState();
+    const SearchNavigationResult result = m_searchService->findPrevious();
+    if (!result.hasResults) {
+        return;
     }
+
+    if (result.targetPageIndex != m_currentPageIndex) {
+        m_currentPageIndex = result.targetPageIndex;
+        renderCurrentPage();
+    } else {
+        emitOverlayState();
+    }
+    emitSearchState();
 }
 
 void PdfDocumentController::clearSearch()
 {
-    m_searchModel.clear();
+    const QString statusMessage = m_searchService->clear();
     emitOverlayState();
-    emitSearchState(QStringLiteral("Suche zurückgesetzt."));
+    emitSearchState(statusMessage);
 }

@@ -3,8 +3,8 @@
 ## Priority A
 
 1. `PdfDocumentController` fachlich weiter verkleinern
-   - Selection-/Overlay-Orchestrierung in echten Services statt nur Split-Units
-   - Search-Orchestrierung in echten Services statt nur Split-Units
+   - Annotation-/Overlay-Domain-Zustand aus dem Controller herausziehen
+   - Richtung `DocumentSession` weitergehen
 
 2. OCR weiter haerten
    - optional echte Cancellation
@@ -28,7 +28,6 @@
 ## Priority C
 
 6. MainWindow weiter zerlegen
-   - Menue-/Action-Wiring
    - Toolbar-/Dock-Aufbau
    - verbleibende UI-Orchestrierung
 

@@ -33,6 +33,7 @@ qt_standard_project_setup()
 set(PDF_TOOL_SOURCES
     src/main.cpp
     src/ui/MainWindow.cpp
+    src/ui/MainWindowActions.cpp
     src/ui/MainWindowDialogWorkflows.cpp
     src/ui/MainWindowFileWorkflows.cpp
     src/ui/MainWindowState.cpp
@@ -52,6 +53,8 @@ set(PDF_TOOL_SOURCES
     src/document/PdfDocumentControllerState.cpp
     src/document/PageThumbnailProvider.cpp
     src/document/RedactionModel.cpp
+    src/document/SearchService.cpp
+    src/document/SelectionService.cpp
     src/document/SidecarService.cpp
     src/services/OcrService.cpp
     src/rendering/PopplerAdapter.cpp
@@ -77,7 +80,9 @@ set(PDF_TOOL_HEADERS
     src/document/PdfTextSelection.h
     src/document/RedactionModel.h
     src/document/SearchModel.h
+    src/document/SearchService.h
     src/document/SelectionModel.h
+    src/document/SelectionService.h
     src/document/SidecarService.h
     src/services/OcrService.h
     src/rendering/PdfRenderEngine.h
@@ -240,6 +245,8 @@ qt_add_executable(PdfDocumentControllerTests
     src/document/PdfDocumentControllerSelection.cpp
     src/document/PdfDocumentControllerState.cpp
     src/document/PageThumbnailProvider.cpp
+    src/document/SearchService.cpp
+    src/document/SelectionService.cpp
     src/document/SidecarService.cpp
     src/services/OcrService.cpp
     src/operations/QPdfOperations.cpp
@@ -302,6 +309,41 @@ qt_add_executable(ExportServiceTests
     src/operations/QPdfOperations.cpp
 )
 
+qt_add_executable(SearchServiceTests
+    tests/SearchServiceTests.cpp
+    src/document/SearchService.cpp
+)
+
+target_include_directories(SearchServiceTests
+    PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
+)
+
+target_link_libraries(SearchServiceTests
+    PRIVATE
+        Qt6::Core
+        Qt6::Gui
+        Qt6::Test
+)
+
+qt_add_executable(SelectionServiceTests
+    tests/SelectionServiceTests.cpp
+    src/document/RedactionModel.cpp
+    src/document/SelectionService.cpp
+)
+
+target_include_directories(SelectionServiceTests
+    PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
+)
+
+target_link_libraries(SelectionServiceTests
+    PRIVATE
+        Qt6::Core
+        Qt6::Gui
+        Qt6::Test
+)
+
 target_include_directories(ExportServiceTests
     PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/src
@@ -322,3 +364,5 @@ add_test(NAME PdfDocumentControllerTests COMMAND PdfDocumentControllerTests)
 add_test(NAME HistoryServiceTests COMMAND HistoryServiceTests)
 add_test(NAME OcrServiceControllerTests COMMAND OcrServiceControllerTests)
 add_test(NAME ExportServiceTests COMMAND ExportServiceTests)
+add_test(NAME SearchServiceTests COMMAND SearchServiceTests)
+add_test(NAME SelectionServiceTests COMMAND SelectionServiceTests)

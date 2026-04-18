@@ -18,8 +18,6 @@
 #include "document/FormFieldModel.h"
 #include "document/PdfDocumentTypes.h"
 #include "document/RedactionModel.h"
-#include "document/SelectionModel.h"
-#include "document/SearchModel.h"
 
 class PdfRenderEngine;
 class QPrinter;
@@ -27,6 +25,8 @@ class PageThumbnailProvider;
 class ExportService;
 class HistoryService;
 class OcrServiceController;
+class SearchService;
+class SelectionService;
 class SidecarService;
 
 class PdfDocumentController : public QObject
@@ -193,21 +193,20 @@ private:
     QStringList m_pageLabels;
     QVector<PdfOutlineEntry> m_outlineEntries;
     PdfDocumentMetadata m_metadata;
-    SelectionModel m_selectionModel;
-    SearchModel m_searchModel;
     AnnotationModel m_annotationModel;
     FormFieldModel m_formFieldModel;
     RedactionModel m_redactionModel;
     std::unique_ptr<ExportService> m_exportService;
     std::unique_ptr<HistoryService> m_historyService;
     std::unique_ptr<OcrServiceController> m_ocrServiceController;
+    std::unique_ptr<SearchService> m_searchService;
+    std::unique_ptr<SelectionService> m_selectionService;
     std::unique_ptr<SidecarService> m_sidecarService;
     QVector<PdfFormField> m_baseFormFields;
     std::unique_ptr<PageThumbnailProvider> m_thumbnailProvider;
     QImage m_currentPageImage;
     QString m_lastError;
     QSizeF m_pageSizePoints;
-    QRectF m_lastSelectionPageRect;
     int m_currentPageIndex {0};
     double m_zoomFactor {1.0};
     QByteArray m_currentOwnerPassword;

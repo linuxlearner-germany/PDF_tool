@@ -28,6 +28,8 @@
   - `ExportService`
   - `HistoryService`
   - `SidecarService`
+  - `SelectionService`
+  - `SearchService`
 
 ### UI-/Controller-Aufteilung
 
@@ -35,9 +37,10 @@
 - `MainWindowState.cpp` enthaelt Theme-, Status- und Kontextmenu-Logik.
 - `MainWindowFileWorkflows.cpp` enthaelt Datei-, Export-, Druck- und OCR-Workflows.
 - `MainWindowDialogWorkflows.cpp` enthaelt dialoggetriebene UI-Workflows.
+- `MainWindowActions.cpp` enthaelt Actions, Menues und Toolbars.
 - `PdfDocumentControllerState.cpp` enthaelt Persistenz-, Historien- und Render-Helfer.
-- `PdfDocumentControllerSelection.cpp` kapselt Selection-/Overlay-Orchestrierung.
-- `PdfDocumentControllerSearch.cpp` kapselt Search-Orchestrierung.
+- `SelectionService` kapselt Selection-/Overlay-Orchestrierung mit eigenem Zustand.
+- `SearchService` kapselt Search-Orchestrierung mit eigenem Zustand.
 
 ### OCR-Haertung
 
@@ -54,4 +57,5 @@
   - `SearchModelTests`
   - `DocumentStateStoreTests`
   - `PdfDocumentControllerTests`
+- `SearchServiceTests` und `SelectionServiceTests` decken die neuen Service-Grenzen ab.
 - `OcrServiceControllerTests` prueft jetzt auch Session-Invalidierung bei pending OCR.

@@ -4,40 +4,26 @@
 #include <QClipboard>
 #include <QGuiApplication>
 
+#include "document/SelectionService.h"
 #include "rendering/PdfRenderEngine.h"
 
 void PdfDocumentController::updateTextSelection(const QRectF &imageSelectionRect)
 {
-    if (!hasDocument() || m_currentPageImage.isNull()) {
+    QVector<QRectF> selectionRects;
+    const bool hasSelection = m_selectionService->updateTextSelection(
+        *m_renderEngine,
+        m_currentPageImage,
+        m_currentPageIndex,
+        imageSelectionRect,
+        [this](const QRectF &rect) { return imageRectToPageRect(rect); },
+        &selectionRects);
+    if (selectionRects.isEmpty()) {
         clearSelectionInternal(true);
         return;
     }
 
-    const QRectF normalizedImageRect = imageSelectionRect.normalized()
-        .intersected(QRectF(QPointF(0.0, 0.0), QSizeF(m_currentPageImage.size())));
-
-    if (normalizedImageRect.width() < 2.0 || normalizedImageRect.height() < 2.0) {
-        clearSelectionInternal(true);
-        return;
-    }
-
-    m_lastSelectionPageRect = imageRectToPageRect(normalizedImageRect);
-    if (m_lastSelectionPageRect.isEmpty()) {
-        clearSelectionInternal(true);
-        return;
-    }
-
-    const PdfTextSelection selection = m_renderEngine->buildTextSelection(m_currentPageIndex, m_lastSelectionPageRect);
-    emit selectionHighlightChanged({ normalizedImageRect });
-
-    if (selection.isEmpty() || selection.toPlainText().isEmpty()) {
-        m_selectionModel.clear();
-        emit textSelectionChanged(false);
-        return;
-    }
-
-    m_selectionModel.setSelection(m_currentPageIndex, selection);
-    emit textSelectionChanged(true);
+    emit selectionHighlightChanged(selectionRects);
+    emit textSelectionChanged(hasSelection);
 }
 
 void PdfDocumentController::clearTextSelection()
@@ -47,7 +33,7 @@ void PdfDocumentController::clearTextSelection()
 
 void PdfDocumentController::copySelectedText()
 {
-    const QString text = m_selectionModel.plainText();
+    const QString text = m_selectionService->selectedText();
     if (text.isEmpty()) {
         return;
     }
@@ -66,16 +52,12 @@ void PdfDocumentController::selectOverlayAt(const QPointF &imagePoint)
         return;
     }
 
-    const QPointF pagePoint = imagePointToPagePoint(imagePoint);
-    const bool annotationSelected = m_annotationModel.selectAt(m_currentPageIndex, pagePoint);
-    const bool redactionSelected = !annotationSelected && m_redactionModel.selectAt(m_currentPageIndex, pagePoint);
-    if (!annotationSelected) {
-        m_annotationModel.clearSelection();
-    }
-    if (!redactionSelected) {
-        m_redactionModel.clearSelection();
-    }
-
+    m_selectionService->selectOverlayAt(
+        m_currentPageIndex,
+        imagePoint,
+        m_annotationModel,
+        m_redactionModel,
+        [this](const QPointF &point) { return imagePointToPagePoint(point); });
     emitOverlayState();
     updateOverlaySelectionSignal();
 }
@@ -199,11 +181,7 @@ void PdfDocumentController::setFormFieldChecked(const QString &fieldId, bool che
 
 void PdfDocumentController::addRedactionFromSelection()
 {
-    if (!hasAreaSelection()) {
-        return;
-    }
-
-    if (!m_redactionModel.add(m_currentPageIndex, m_lastSelectionPageRect)) {
+    if (!m_selectionService->addRedactionFromSelection(m_currentPageIndex, m_redactionModel)) {
         return;
     }
 

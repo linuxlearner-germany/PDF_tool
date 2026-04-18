@@ -15,6 +15,8 @@
 #include "document/HistoryService.h"
 #include "document/OcrServiceController.h"
 #include "document/PageThumbnailProvider.h"
+#include "document/SearchService.h"
+#include "document/SelectionService.h"
 #include "document/SidecarService.h"
 #include "rendering/PdfRenderEngine.h"
 
@@ -34,6 +36,8 @@ PdfDocumentController::PdfDocumentController(std::unique_ptr<PdfRenderEngine> re
           OcrServiceController::RecognizeFunction(),
           OcrServiceController::CapabilityProvider(),
           this))
+    , m_searchService(std::make_unique<SearchService>())
+    , m_selectionService(std::make_unique<SelectionService>())
     , m_sidecarService(std::make_unique<SidecarService>())
     , m_thumbnailProvider(std::make_unique<PageThumbnailProvider>(m_renderEngine.get()))
 {
@@ -171,17 +175,17 @@ QImage PdfDocumentController::currentPageImage() const
 
 bool PdfDocumentController::hasTextSelection() const
 {
-    return !m_selectionModel.isEmpty();
+    return m_selectionService->hasTextSelection();
 }
 
 bool PdfDocumentController::hasAreaSelection() const
 {
-    return !m_lastSelectionPageRect.isEmpty();
+    return m_selectionService->hasAreaSelection();
 }
 
 QString PdfDocumentController::selectedText() const
 {
-    return m_selectionModel.plainText();
+    return m_selectionService->selectedText();
 }
 
 bool PdfDocumentController::isOcrAvailable() const
@@ -206,12 +210,12 @@ CapabilityState PdfDocumentController::ocrCapabilityState() const
 
 bool PdfDocumentController::hasSearchResults() const
 {
-    return m_searchModel.hasResults();
+    return m_searchService->hasResults();
 }
 
 QString PdfDocumentController::searchQuery() const
 {
-    return m_searchModel.query();
+    return m_searchService->query();
 }
 
 bool PdfDocumentController::requiresPassword() const
@@ -382,26 +386,14 @@ bool PdfDocumentController::textFormFieldStyleAt(
         return false;
     }
 
-    const QString id = m_formFieldModel.fieldIdAt(m_currentPageIndex, imagePointToPagePoint(imagePoint));
-    if (id.isEmpty()) {
-        return false;
-    }
-
-    PdfTextStyle fieldStyle;
-    if (!m_formFieldModel.textFieldStyle(id, fieldStyle)) {
-        return false;
-    }
-
-    for (const PdfFormField &field : m_formFieldModel.fieldsForPage(m_currentPageIndex)) {
-        if (field.id == id && field.kind == PdfFormFieldKind::Text) {
-            fieldId = id;
-            label = field.label;
-            style = fieldStyle;
-            return true;
-        }
-    }
-
-    return false;
+    return m_selectionService->textFormFieldStyleAt(
+        m_currentPageIndex,
+        imagePoint,
+        m_formFieldModel,
+        [this](const QPointF &point) { return imagePointToPagePoint(point); },
+        fieldId,
+        label,
+        style);
 }
 
 QString PdfDocumentController::selectedTextEditText() const
@@ -532,7 +524,7 @@ void PdfDocumentController::previousPage()
 
 void PdfDocumentController::addHighlightAnnotationFromSelection()
 {
-    if (!m_annotationModel.addHighlightFromSelection(m_selectionModel)) {
+    if (!m_annotationModel.addHighlightFromSelection(m_selectionService->selectionModel())) {
         return;
     }
 
@@ -545,11 +537,12 @@ void PdfDocumentController::addHighlightAnnotationFromSelection()
 
 void PdfDocumentController::addRectangleAnnotationFromSelection()
 {
-    if (!hasAreaSelection()) {
+    const QRectF selectionPageRect = m_selectionService->selectionPageRect();
+    if (selectionPageRect.isEmpty()) {
         return;
     }
 
-    if (!m_annotationModel.addRectangle(m_currentPageIndex, m_lastSelectionPageRect)) {
+    if (!m_annotationModel.addRectangle(m_currentPageIndex, selectionPageRect)) {
         return;
     }
 
@@ -607,11 +600,12 @@ void PdfDocumentController::replaceSelectedText(
     const PdfTextStyle &style,
     const QColor &backgroundColor)
 {
-    if (!hasAreaSelection() || text.trimmed().isEmpty()) {
+    const QRectF selectionPageRect = m_selectionService->selectionPageRect();
+    if (selectionPageRect.isEmpty() || text.trimmed().isEmpty()) {
         return;
     }
 
-    if (!m_annotationModel.addFreeText(m_currentPageIndex, m_lastSelectionPageRect, text, style, backgroundColor)) {
+    if (!m_annotationModel.addFreeText(m_currentPageIndex, selectionPageRect, text, style, backgroundColor)) {
         return;
     }
 
@@ -654,7 +648,8 @@ void PdfDocumentController::addSignatureFromImageAt(const QPointF &imagePoint, c
 
 void PdfDocumentController::addSignatureFromImageToSelection(const QImage &signatureImage)
 {
-    if (!hasDocument() || signatureImage.isNull() || !hasAreaSelection()) {
+    const QRectF selectionPageRect = m_selectionService->selectionPageRect();
+    if (!hasDocument() || signatureImage.isNull() || selectionPageRect.isEmpty()) {
         return;
     }
 
@@ -663,7 +658,7 @@ void PdfDocumentController::addSignatureFromImageToSelection(const QImage &signa
     buffer.open(QIODevice::WriteOnly);
     signatureImage.save(&buffer, "PNG");
 
-    if (!m_annotationModel.addSignature(m_currentPageIndex, m_lastSelectionPageRect, pngBytes)) {
+    if (!m_annotationModel.addSignature(m_currentPageIndex, selectionPageRect, pngBytes)) {
         return;
     }
 
@@ -755,7 +750,7 @@ bool PdfDocumentController::remapPageOrder(const QVector<int> &newOrder)
     m_formFieldModel.remapPages(newOrder);
     m_redactionModel.remapPages(newOrder);
     clearSelectionInternal(false);
-    m_searchModel.clear();
+    m_searchService->reset();
     saveSidecarState();
     recordHistorySnapshot();
     emitOverlayState();
@@ -855,11 +850,12 @@ void PdfDocumentController::runOcrOnCurrentPage()
 
 void PdfDocumentController::runOcrOnSelection()
 {
-    if (!hasDocument() || !hasAreaSelection() || m_currentPageImage.isNull()) {
+    const QRectF selectionPageRect = m_selectionService->selectionPageRect();
+    if (!hasDocument() || selectionPageRect.isEmpty() || m_currentPageImage.isNull()) {
         return;
     }
 
-    const QRectF imageRect = pageRectToImageRect(m_lastSelectionPageRect)
+    const QRectF imageRect = pageRectToImageRect(selectionPageRect)
         .intersected(QRectF(QPointF(0.0, 0.0), QSizeF(m_currentPageImage.size())));
     if (imageRect.isEmpty()) {
         return;

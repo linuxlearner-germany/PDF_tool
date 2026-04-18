@@ -12,9 +12,20 @@
   - haelt UI-relevanten Dokumentzustand
   - verbindet Services mit Qt-Signalen
   - steuert Seitennavigation und Dokumentlebenszyklus
-  - delegiert Search- und Selection-Flows in eigene Kompilierungseinheiten
+  - delegiert Search- und Selection-Flows in eigene Services
 
 ### Services
+
+- `SelectionService`
+  - Textselektion und Bereichsauswahl
+  - Overlay-Selektion
+  - Redaction aus Selektion
+  - Form-Field-Style-Lookups fuer UI-nahe Selection-Flows
+
+- `SearchService`
+  - Query-Zustand
+  - Trefferlisten
+  - Navigation ueber Suchtreffer
 
 - `OcrServiceController`
   - asynchrone OCR-Ausfuehrung
@@ -59,6 +70,6 @@ struct CapabilityState {
 
 ## Noch nicht vollendet
 
-- `MainWindow` ist weiter entlastet, aber Menue-/Action-Wiring liegt noch zentral in `MainWindow.cpp`.
+- `MainWindow` ist weiter entlastet; Action-/Menu-/Toolbar-Wiring liegt jetzt in `MainWindowActions.cpp`.
 - `PdfDocumentController` ist schlanker, kennt aber weiterhin Annotation- und Overlay-Zustand direkt.
 - Export- und OCR-Service sind ausgelagert, aber noch nicht maximal granular.

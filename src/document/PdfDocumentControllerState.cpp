@@ -1,6 +1,8 @@
 #include "document/PdfDocumentController.h"
 
 #include "document/HistoryService.h"
+#include "document/SearchService.h"
+#include "document/SelectionService.h"
 #include "document/SidecarService.h"
 
 QString PdfDocumentController::annotationSidecarPath() const
@@ -44,6 +46,7 @@ void PdfDocumentController::restoreDocumentState(const QJsonObject &state)
     m_formFieldModel.setFields(m_baseFormFields);
     m_formFieldModel.fromJson(state.value(QStringLiteral("formFields")).toArray());
     m_redactionModel.fromJson(state.value(QStringLiteral("redactions")).toArray());
+    m_selectionService->clearTextSelection();
 
     emitOverlayState();
     updateOverlaySelectionSignal();
@@ -72,8 +75,8 @@ void PdfDocumentController::resetDocumentState()
     m_pageLabels.clear();
     m_outlineEntries.clear();
     m_metadata = {};
-    m_selectionModel.clear();
-    m_searchModel.clear();
+    m_selectionService->reset();
+    m_searchService->reset();
     m_annotationModel.clear();
     m_formFieldModel.clear();
     m_redactionModel.clear();
@@ -84,7 +87,6 @@ void PdfDocumentController::resetDocumentState()
     m_currentPageImage = {};
     m_lastError.clear();
     m_pageSizePoints = {};
-    m_lastSelectionPageRect = {};
     m_currentPageIndex = 0;
     m_zoomFactor = 1.0;
     m_currentOwnerPassword.clear();
@@ -94,8 +96,7 @@ void PdfDocumentController::resetDocumentState()
 
 void PdfDocumentController::clearSelectionInternal(bool emitSignal)
 {
-    m_selectionModel.clear();
-    m_lastSelectionPageRect = {};
+    m_selectionService->clearTextSelection();
 
     if (emitSignal) {
         emit selectionHighlightChanged({});
@@ -159,13 +160,13 @@ QRectF PdfDocumentController::pageRectToImageRect(const QRectF &pageRect) const
 void PdfDocumentController::emitOverlayState()
 {
     QVector<QRectF> selectionRects;
-    if (!m_lastSelectionPageRect.isEmpty()) {
-        selectionRects.append(pageRectToImageRect(m_lastSelectionPageRect));
+    if (const QRectF selectionPageRect = m_selectionService->selectionPageRect(); !selectionPageRect.isEmpty()) {
+        selectionRects.append(pageRectToImageRect(selectionPageRect));
     }
     emit selectionHighlightChanged(selectionRects);
 
-    emit searchHighlightChanged(pageRectsToImageRects(m_searchModel.hitRectsForPage(m_currentPageIndex)),
-                                pageRectsToImageRects(m_searchModel.currentHitRectsForPage(m_currentPageIndex)));
+    emit searchHighlightChanged(pageRectsToImageRects(m_searchService->hitRectsForPage(m_currentPageIndex)),
+                                pageRectsToImageRects(m_searchService->currentHitRectsForPage(m_currentPageIndex)));
 
     QVector<PdfAnnotationOverlay> annotationOverlays;
     for (const PdfAnnotation &annotation : m_annotationModel.annotationsForPage(m_currentPageIndex)) {
@@ -215,18 +216,18 @@ void PdfDocumentController::emitSearchState(const QString &fallbackMessage)
         return;
     }
 
-    if (!m_searchModel.hasResults()) {
+    if (!m_searchService->hasResults()) {
         emit searchStateChanged(false, 0, 0, QStringLiteral("Keine aktive Suche."));
         return;
     }
 
-    const PdfSearchHit *currentHit = m_searchModel.currentHit();
-    const int currentIndex = currentHit ? m_searchModel.currentIndex() + 1 : 0;
-    const int totalHits = m_searchModel.hitCount();
+    const PdfSearchHit *currentHit = m_searchService->currentHit();
+    const int currentIndex = currentHit ? m_searchService->currentIndex() + 1 : 0;
+    const int totalHits = m_searchService->hitCount();
     const QString status = QStringLiteral("Treffer %1/%2 fuer \"%3\"")
         .arg(currentIndex)
         .arg(totalHits)
-        .arg(m_searchModel.query());
+        .arg(m_searchService->query());
     emit searchStateChanged(true, currentIndex, totalHits, status);
 }
 

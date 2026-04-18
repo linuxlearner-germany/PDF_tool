@@ -14,8 +14,10 @@ PDFTool is a local-first PDF desktop application for Linux. The current focus is
 
 ## Current Architecture
 
-- `MainWindow` owns the desktop shell and action wiring.
+- `MainWindow` owns the desktop shell.
+- `MainWindowActions.cpp` isolates action, menu and toolbar wiring.
 - `PdfDocumentController` is the document orchestrator for UI-facing state.
+- `SelectionService` and `SearchService` own selection/search state outside the controller.
 - `ExportService`, `HistoryService`, `SidecarService` and `OcrServiceController` handle specialized workflows.
 - `AtomicFileTransaction` and `QSaveFile` protect sensitive write paths.
 
@@ -41,12 +43,12 @@ Optional:
 
 The project expects a working Qt 6 CMake package on the machine. If `cmake -S . -B cmake-build-debug` fails with `Qt6Config.cmake` not found, set a Qt prefix explicitly.
 
-Example:
+Recommended local flow:
 
 ```bash
-cmake -S . -B cmake-build-debug -DCMAKE_PREFIX_PATH=/path/to/Qt/6.x/gcc_64
-cmake --build cmake-build-debug
-ctest --test-dir cmake-build-debug --output-on-failure
+export QT6_PREFIX=/path/to/Qt/6.x/gcc_64
+./scripts/configure.sh
+./scripts/build.sh
 ```
 
 For systems with distro Qt packages, `Qt6_DIR` or `CMAKE_PREFIX_PATH` must point at the directory containing `Qt6Config.cmake`.
