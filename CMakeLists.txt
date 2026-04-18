@@ -21,7 +21,7 @@ if(EXISTS "${PDF_TOOL_LOCAL_PKGCONFIG_DIR}")
     endif()
 endif()
 
-find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets PrintSupport Test)
+find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets PrintSupport Concurrent Test)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(POPPLER_QT6 REQUIRED IMPORTED_TARGET poppler-qt6)
 pkg_check_modules(JPEG_LIB REQUIRED IMPORTED_TARGET libjpeg)
@@ -83,6 +83,7 @@ target_link_directories(PDFTool
 target_link_libraries(PDFTool
     PRIVATE
         Qt6::Core
+        Qt6::Concurrent
         Qt6::Gui
         Qt6::PrintSupport
         Qt6::Widgets

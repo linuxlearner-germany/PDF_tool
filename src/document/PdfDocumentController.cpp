@@ -18,6 +18,7 @@
 #include <QPixmap>
 #include <QTemporaryFile>
 
+#include <QtConcurrent/QtConcurrent>
 #include <QtPrintSupport/QPrinter>
 
 #include "document/PageThumbnailProvider.h"
@@ -276,6 +277,16 @@ bool PdfDocumentController::isOcrAvailable() const
     return OcrService::isAvailable();
 }
 
+bool PdfDocumentController::isOcrBusy() const
+{
+    return m_ocrWatcher != nullptr;
+}
+
+QString PdfDocumentController::ocrAvailabilityError() const
+{
+    return OcrService::availabilityError();
+}
+
 bool PdfDocumentController::hasSearchResults() const
 {
     return m_searchModel.hasResults();
@@ -381,6 +392,9 @@ bool PdfDocumentController::exportEditedPdf(const QString &outputFile, bool excl
             emit statusMessageChanged(QStringLiteral("Bearbeitetes PDF mit nativen PDF-Aenderungen exportiert."));
             return true;
         }
+
+        emit statusMessageChanged(
+            QStringLiteral("Native PDF-Aenderungen nicht verfuegbar, Export faellt auf gerastertes PDF zurueck."));
     }
 
     emit busyStateChanged(true, QStringLiteral("Bearbeitetes PDF wird exportiert..."));
@@ -668,6 +682,18 @@ bool PdfDocumentController::exportRedactedPdf(const QString &outputFile)
     emit busyStateChanged(false, QString());
     emit statusMessageChanged(QStringLiteral("Geschwärztes PDF exportiert."));
     return true;
+}
+
+bool PdfDocumentController::supportsNativePdfEditExport() const
+{
+    QPdfOperations operations;
+    return operations.isAvailable();
+}
+
+QString PdfDocumentController::nativePdfEditExportError() const
+{
+    QPdfOperations operations;
+    return operations.availabilityError();
 }
 
 bool PdfDocumentController::hasSelectedOverlay() const
@@ -1478,20 +1504,14 @@ void PdfDocumentController::runOcrOnCurrentPage()
         return;
     }
 
-    emit busyStateChanged(true, QStringLiteral("OCR für aktuelle Seite läuft..."));
-    QString errorMessage;
     const QImage image = m_renderEngine->renderPage(m_currentPageIndex, 2.5);
-    const QString text = OcrService::recognizeImage(image, &errorMessage, QStringLiteral("deu+eng"), 3);
-    emit busyStateChanged(false, QString());
-
-    if (text.isEmpty()) {
-        m_lastError = errorMessage.isEmpty() ? QStringLiteral("OCR hat keinen Text erkannt.") : errorMessage;
+    if (image.isNull()) {
+        m_lastError = m_renderEngine->lastError();
         emit errorOccurred(m_lastError);
         return;
     }
 
-    emit ocrFinished(QStringLiteral("OCR: Aktuelle Seite"), text);
-    emit statusMessageChanged(QStringLiteral("OCR für aktuelle Seite abgeschlossen."));
+    startOcrJob(image, QStringLiteral("OCR fuer aktuelle Seite laeuft..."), QStringLiteral("OCR: Aktuelle Seite"), 3);
 }
 
 void PdfDocumentController::runOcrOnSelection()
@@ -1506,20 +1526,61 @@ void PdfDocumentController::runOcrOnSelection()
         return;
     }
 
-    emit busyStateChanged(true, QStringLiteral("OCR für Auswahl läuft..."));
-    QString errorMessage;
     const QImage croppedImage = m_currentPageImage.copy(imageRect.toAlignedRect());
-    const QString text = OcrService::recognizeImage(croppedImage, &errorMessage, QStringLiteral("deu+eng"), 6);
-    emit busyStateChanged(false, QString());
-
-    if (text.isEmpty()) {
-        m_lastError = errorMessage.isEmpty() ? QStringLiteral("OCR hat keinen Text erkannt.") : errorMessage;
+    if (croppedImage.isNull()) {
+        m_lastError = QStringLiteral("Auswahl konnte nicht fuer OCR vorbereitet werden.");
         emit errorOccurred(m_lastError);
         return;
     }
 
-    emit ocrFinished(QStringLiteral("OCR: Auswahl"), text);
-    emit statusMessageChanged(QStringLiteral("OCR für Auswahl abgeschlossen."));
+    startOcrJob(croppedImage, QStringLiteral("OCR fuer Auswahl laeuft..."), QStringLiteral("OCR: Auswahl"), 6);
+}
+
+void PdfDocumentController::startOcrJob(
+    const QImage &image,
+    const QString &busyMessage,
+    const QString &resultTitle,
+    int pageSegmentationMode)
+{
+    if (m_ocrWatcher) {
+        m_lastError = QStringLiteral("OCR laeuft bereits.");
+        emit errorOccurred(m_lastError);
+        return;
+    }
+
+    const QString availabilityError = ocrAvailabilityError();
+    if (!availabilityError.isEmpty()) {
+        m_lastError = availabilityError;
+        emit errorOccurred(m_lastError);
+        return;
+    }
+
+    emit busyStateChanged(true, busyMessage);
+
+    m_ocrWatcher = new QFutureWatcher<OcrJobResult>(this);
+    connect(m_ocrWatcher, &QFutureWatcher<OcrJobResult>::finished, this, [this, resultTitle]() {
+        const OcrJobResult result = m_ocrWatcher->result();
+        m_ocrWatcher->deleteLater();
+        m_ocrWatcher = nullptr;
+        emit busyStateChanged(false, QString());
+
+        if (result.text.isEmpty()) {
+            m_lastError = result.errorMessage.isEmpty()
+                ? QStringLiteral("OCR hat keinen Text erkannt.")
+                : result.errorMessage;
+            emit errorOccurred(m_lastError);
+            return;
+        }
+
+        emit ocrFinished(resultTitle, result.text);
+        emit statusMessageChanged(QStringLiteral("%1 abgeschlossen.").arg(resultTitle));
+    });
+
+    m_ocrWatcher->setFuture(QtConcurrent::run([image, pageSegmentationMode]() {
+        OcrJobResult result;
+        result.text = OcrService::recognizeImage(image, &result.errorMessage, QStringLiteral("deu+eng"), pageSegmentationMode);
+        return result;
+    }));
 }
 
 QString PdfDocumentController::annotationSidecarPath() const

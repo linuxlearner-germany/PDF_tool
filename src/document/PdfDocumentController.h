@@ -3,6 +3,7 @@
 #include <memory>
 
 #include <QByteArray>
+#include <QFutureWatcher>
 #include <QObject>
 #include <QColor>
 #include <QImage>
@@ -24,6 +25,12 @@
 class PdfRenderEngine;
 class QPrinter;
 class PageThumbnailProvider;
+
+struct OcrJobResult
+{
+    QString text;
+    QString errorMessage;
+};
 
 class PdfDocumentController : public QObject
 {
@@ -54,6 +61,8 @@ public:
     bool hasAreaSelection() const;
     QString selectedText() const;
     bool isOcrAvailable() const;
+    bool isOcrBusy() const;
+    QString ocrAvailabilityError() const;
     bool hasSearchResults() const;
     QString searchQuery() const;
     bool requiresPassword() const;
@@ -62,6 +71,8 @@ public:
     bool printDocument(QPrinter *printer);
     bool exportEditedPdf(const QString &outputFile, bool excludeSelectedSignatureAnnotation = false);
     bool exportRedactedPdf(const QString &outputFile);
+    bool supportsNativePdfEditExport() const;
+    QString nativePdfEditExportError() const;
     bool hasSelectedOverlay() const;
     PdfAnnotationKind selectedAnnotationKind() const;
     QColor selectedAnnotationColor() const;
@@ -159,6 +170,7 @@ signals:
     void historyStateChanged(bool canUndo, bool canRedo);
 
 private:
+    void startOcrJob(const QImage &image, const QString &busyMessage, const QString &resultTitle, int pageSegmentationMode);
     QString annotationSidecarPath() const;
     void loadSidecarState();
     void saveSidecarState() const;
@@ -200,4 +212,5 @@ private:
     QByteArray m_currentUserPassword;
     QVector<QJsonObject> m_historySnapshots;
     int m_historyIndex {-1};
+    QFutureWatcher<OcrJobResult> *m_ocrWatcher {nullptr};
 };

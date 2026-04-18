@@ -93,6 +93,13 @@ bool OcrService::isAvailable()
     return !QStandardPaths::findExecutable(QStringLiteral("tesseract")).isEmpty();
 }
 
+QString OcrService::availabilityError()
+{
+    return isAvailable()
+        ? QString()
+        : QStringLiteral("Tesseract wurde nicht gefunden. OCR ist deaktiviert, bis das Binary im PATH verfuegbar ist.");
+}
+
 QString OcrService::recognizeImage(
     const QImage &image,
     QString *errorMessage,

@@ -32,6 +32,15 @@ QString QPdfOperations::backendName() const
     return QStringLiteral("qpdf");
 }
 
+QString QPdfOperations::availabilityError() const
+{
+#ifdef PDF_TOOL_HAS_QPDF
+    return {};
+#else
+    return QStringLiteral("qpdf wurde beim Build nicht gefunden. Native PDF-Operationen sind deaktiviert.");
+#endif
+}
+
 QString QPdfOperations::lastError() const
 {
     return m_lastError;

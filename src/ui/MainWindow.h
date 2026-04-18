@@ -97,11 +97,21 @@ private:
     void createInspectorDock();
     void applyWindowStyle();
     void applyTheme(ThemeMode mode);
+    void updateCapabilityHints();
     ThemeMode loadThemeSetting() const;
     void saveThemeSetting(ThemeMode mode) const;
     QWidget *createToolbarSpacer(int width = 16) const;
     QLabel *createStatusPill(const QString &text, const QString &objectName) const;
     bool applyPageOrderChange(const QVector<int> &newOrder, int reopenedPageIndex, const QString &successMessage);
+    bool replaceDocumentWithBackup(
+        const QString &stagedPath,
+        const QString &documentPath,
+        const QString &backupPath,
+        QString &errorMessage) const;
+    bool restoreDocumentFromBackup(
+        const QString &documentPath,
+        const QString &backupPath,
+        QString &errorMessage) const;
     void refreshNavigationPanels();
     void refreshInspector();
     void populateOutlineTree(const QVector<PdfOutlineEntry> &entries, QTreeWidgetItem *parentItem = nullptr);
@@ -131,6 +141,7 @@ private:
     QSpinBox *m_pageJumpSpinBox {nullptr};
     QLabel *m_pageCountHintLabel {nullptr};
     QLabel *m_documentStatusLabel {nullptr};
+    QLabel *m_capabilityStatusLabel {nullptr};
     QLabel *m_modeStatusLabel {nullptr};
     QLabel *m_zoomLabel {nullptr};
     QLabel *m_pageStatusLabel {nullptr};

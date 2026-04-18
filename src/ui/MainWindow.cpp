@@ -414,6 +414,7 @@ MainWindow::MainWindow(QWidget *parent)
     updateSelectionDependentActions(false);
     updateOverlaySelectionActions(false);
     updateHistoryActions(false, false);
+    updateCapabilityHints();
     refreshInspector();
     m_documentController->setThumbnailSize(QSize(140, 180));
 }
@@ -1017,6 +1018,7 @@ void MainWindow::updateCurrentPage(int pageIndex, int pageCount, const QString &
 void MainWindow::updateUiState(bool hasDocument)
 {
     updateHistoryActions(m_documentController->canUndo(), m_documentController->canRedo());
+    updateCapabilityHints();
     m_saveAction->setEnabled(hasDocument);
     m_mergePdfsAction->setEnabled(m_pdfOperations->isAvailable());
     m_splitPdfAction->setEnabled(hasDocument && m_pdfOperations->isAvailable());
@@ -1536,6 +1538,50 @@ QLabel *MainWindow::createStatusPill(const QString &text, const QString &objectN
     return label;
 }
 
+void MainWindow::updateCapabilityHints()
+{
+    const QString qpdfError = m_pdfOperations->availabilityError();
+    const QString ocrError = m_documentController->ocrAvailabilityError();
+
+    const QString nativeExportTip = qpdfError.isEmpty()
+        ? QStringLiteral("Bearbeitetes PDF mit nativen PDF-Aenderungen exportieren.")
+        : QStringLiteral("Bearbeitetes PDF exportieren. %1").arg(qpdfError + QStringLiteral(" Fallback: gerastertes PDF."));
+    m_exportEditedPdfAction->setToolTip(nativeExportTip);
+    m_exportEditedPdfAction->setStatusTip(nativeExportTip);
+
+    const QString redactedExportTip = qpdfError.isEmpty()
+        ? QStringLiteral("Geschwaerztes PDF mit nativer Redaction exportieren.")
+        : QStringLiteral("Geschwaerztes PDF exportieren. %1").arg(qpdfError + QStringLiteral(" Fallback: gerastertes PDF."));
+    m_exportRedactedPdfAction->setToolTip(redactedExportTip);
+    m_exportRedactedPdfAction->setStatusTip(redactedExportTip);
+
+    const QString qpdfDependentTip = qpdfError.isEmpty()
+        ? QStringLiteral("Native PDF-Operation mit qpdf.")
+        : qpdfError;
+    m_mergePdfsAction->setToolTip(qpdfDependentTip);
+    m_splitPdfAction->setToolTip(qpdfDependentTip);
+    m_exportEncryptedPdfAction->setToolTip(qpdfDependentTip);
+    m_movePageLeftAction->setToolTip(qpdfDependentTip);
+    m_movePageRightAction->setToolTip(qpdfDependentTip);
+    m_deletePageAction->setToolTip(qpdfDependentTip);
+
+    const QString ocrTip = ocrError.isEmpty()
+        ? QStringLiteral("OCR mit lokalem Tesseract ausfuehren.")
+        : ocrError;
+    m_runOcrCurrentPageAction->setToolTip(ocrTip);
+    m_runOcrSelectionAction->setToolTip(ocrTip);
+
+    if (m_capabilityStatusLabel) {
+        const QString qpdfStatus = qpdfError.isEmpty() ? QStringLiteral("qpdf bereit") : QStringLiteral("qpdf fehlt");
+        const QString ocrStatus = ocrError.isEmpty() ? QStringLiteral("OCR bereit") : QStringLiteral("OCR fehlt");
+        m_capabilityStatusLabel->setText(QStringLiteral("%1 | %2").arg(qpdfStatus, ocrStatus));
+        m_capabilityStatusLabel->setToolTip(
+            QStringLiteral("%1\n%2")
+                .arg(qpdfError.isEmpty() ? QStringLiteral("qpdf aktiv.") : qpdfError)
+                .arg(ocrError.isEmpty() ? QStringLiteral("Tesseract aktiv.") : ocrError));
+    }
+}
+
 bool MainWindow::applyPageOrderChange(const QVector<int> &newOrder, int reopenedPageIndex, const QString &successMessage)
 {
     if (!m_documentController->hasDocument() || !m_pdfOperations->isAvailable()) {
@@ -1546,40 +1592,93 @@ bool MainWindow::applyPageOrderChange(const QVector<int> &newOrder, int reopened
     const QByteArray ownerPassword = m_documentController->currentOwnerPassword();
     const QByteArray userPassword = m_documentController->currentUserPassword();
     const QString tempPath = documentPath + QStringLiteral(".pageops.tmp.pdf");
+    const QString backupPath = documentPath + QStringLiteral(".pageops.bak.pdf");
 
     QFile::remove(tempPath);
+    QFile::remove(backupPath);
     if (!m_pdfOperations->reorderPages(documentPath, tempPath, newOrder, userPassword)) {
         showError(m_pdfOperations->lastError());
         return false;
     }
 
-    if (!QFile::remove(documentPath)) {
+    QString replaceError;
+    if (!replaceDocumentWithBackup(tempPath, documentPath, backupPath, replaceError)) {
         QFile::remove(tempPath);
-        showError(QStringLiteral("Originaldatei konnte nicht ersetzt werden."));
-        return false;
-    }
-
-    if (!QFile::rename(tempPath, documentPath)) {
-        showError(QStringLiteral("Temporäre PDF-Datei konnte nicht übernommen werden."));
+        showError(replaceError);
         return false;
     }
 
     if (!m_documentController->remapPageOrder(newOrder)) {
-        showError(QStringLiteral("Begleitdaten konnten nicht auf die neue Seitenreihenfolge angepasst werden."));
+        QString restoreError;
+        restoreDocumentFromBackup(documentPath, backupPath, restoreError);
+        m_documentController->openDocument(documentPath, ownerPassword, userPassword);
+        showError(QStringLiteral("Begleitdaten konnten nicht auf die neue Seitenreihenfolge angepasst werden.%1")
+                      .arg(restoreError.isEmpty() ? QString() : QStringLiteral("\nRollback: %1").arg(restoreError)));
         return false;
     }
 
     if (!m_documentController->openDocument(documentPath, ownerPassword, userPassword)) {
-        showError(m_documentController->lastError());
+        const QString reopenError = m_documentController->lastError();
+        QString restoreError;
+        restoreDocumentFromBackup(documentPath, backupPath, restoreError);
+        m_documentController->openDocument(documentPath, ownerPassword, userPassword);
+        showError(QStringLiteral("Die aktualisierte PDF konnte nicht erneut geladen werden: %1%2")
+                      .arg(reopenError)
+                      .arg(restoreError.isEmpty() ? QString() : QStringLiteral("\nRollback: %1").arg(restoreError)));
         return false;
     }
 
+    QFile::remove(backupPath);
     refreshNavigationPanels();
     updateWindowTitle();
     if (reopenedPageIndex >= 0 && reopenedPageIndex < m_documentController->pageCount()) {
         m_documentController->goToPage(reopenedPageIndex);
     }
     statusBar()->showMessage(successMessage, 4000);
+    return true;
+}
+
+bool MainWindow::replaceDocumentWithBackup(
+    const QString &stagedPath,
+    const QString &documentPath,
+    const QString &backupPath,
+    QString &errorMessage) const
+{
+    errorMessage.clear();
+
+    if (QFile::exists(documentPath) && !QFile::rename(documentPath, backupPath)) {
+        errorMessage = QStringLiteral("Originaldatei konnte nicht gesichert werden.");
+        return false;
+    }
+
+    if (!QFile::rename(stagedPath, documentPath)) {
+        if (QFile::exists(backupPath)) {
+            QFile::rename(backupPath, documentPath);
+        }
+        errorMessage = QStringLiteral("Temporäre PDF-Datei konnte nicht übernommen werden.");
+        return false;
+    }
+
+    return true;
+}
+
+bool MainWindow::restoreDocumentFromBackup(
+    const QString &documentPath,
+    const QString &backupPath,
+    QString &errorMessage) const
+{
+    errorMessage.clear();
+
+    if (!QFile::exists(backupPath)) {
+        return true;
+    }
+
+    QFile::remove(documentPath);
+    if (!QFile::rename(backupPath, documentPath)) {
+        errorMessage = QStringLiteral("Originaldatei konnte aus dem Backup nicht wiederhergestellt werden.");
+        return false;
+    }
+
     return true;
 }
 
@@ -2368,6 +2467,7 @@ void MainWindow::applyInspectorChanges()
 void MainWindow::createStatusBar()
 {
     m_documentStatusLabel = createStatusPill(QStringLiteral("Kein Dokument"), QStringLiteral("statusPillAccent"));
+    m_capabilityStatusLabel = createStatusPill(QStringLiteral("qpdf ? | OCR ?"), QStringLiteral("statusPill"));
     m_modeStatusLabel = createStatusPill(QStringLiteral("Bereit"), QStringLiteral("statusPill"));
     m_pageStatusLabel = createStatusPill(QStringLiteral("Seite: -/-"), QStringLiteral("statusPill"));
     m_zoomLabel = createStatusPill(QStringLiteral("Zoom: 100%"), QStringLiteral("statusPill"));
@@ -2375,6 +2475,7 @@ void MainWindow::createStatusBar()
 
     statusBar()->setSizeGripEnabled(false);
     statusBar()->addWidget(m_documentStatusLabel);
+    statusBar()->addWidget(m_capabilityStatusLabel);
     statusBar()->addWidget(m_modeStatusLabel);
     statusBar()->addPermanentWidget(m_pageStatusLabel);
     statusBar()->addPermanentWidget(m_zoomLabel);
