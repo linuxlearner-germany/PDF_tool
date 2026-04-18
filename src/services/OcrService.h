@@ -17,6 +17,7 @@ class OcrService
 public:
     static bool isAvailable();
     static QString availabilityError();
+    static CapabilityState capabilityState();
     static QString recognizeImage(
         const QImage &image,
         QString *errorMessage,

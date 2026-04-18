@@ -17,6 +17,7 @@ public:
     bool isAvailable() const;
     QString backendName() const;
     QString availabilityError() const;
+    CapabilityState capabilityState() const;
     QString lastError() const;
 
     bool mergeFiles(const QStringList &inputFiles, const QString &outputFile);

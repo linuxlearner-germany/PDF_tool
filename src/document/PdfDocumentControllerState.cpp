@@ -1,15 +1,11 @@
 #include "document/PdfDocumentController.h"
 
-#include "document/DocumentStateStore.h"
-
-namespace
-{
-constexpr int kSidecarVersion = 3;
-}
+#include "document/HistoryService.h"
+#include "document/SidecarService.h"
 
 QString PdfDocumentController::annotationSidecarPath() const
 {
-    return DocumentStateStore::sidecarPathForDocument(m_documentPath);
+    return m_sidecarService->sidecarPathForDocument(m_documentPath);
 }
 
 void PdfDocumentController::loadSidecarState()
@@ -19,19 +15,10 @@ void PdfDocumentController::loadSidecarState()
         return;
     }
 
-    QJsonObject root;
     QString errorMessage;
-    if (!DocumentStateStore::loadFromFile(sidecarPath, root, &errorMessage)) {
+    if (!m_sidecarService->load(m_documentPath, m_annotationModel, m_formFieldModel, m_redactionModel, &errorMessage)) {
         emit statusMessageChanged(errorMessage);
         return;
-    }
-
-    if (root.isEmpty()) {
-        return;
-    }
-
-    if (!DocumentStateStore::applyState(root, m_annotationModel, m_formFieldModel, m_redactionModel, &errorMessage)) {
-        emit statusMessageChanged(errorMessage);
     }
 }
 
@@ -43,12 +30,12 @@ void PdfDocumentController::saveSidecarState() const
     }
 
     QString errorMessage;
-    DocumentStateStore::saveToFile(sidecarPath, currentDocumentState(), &errorMessage);
+    m_sidecarService->save(m_documentPath, m_annotationModel, m_formFieldModel, m_redactionModel, &errorMessage);
 }
 
 QJsonObject PdfDocumentController::currentDocumentState() const
 {
-    return DocumentStateStore::buildState(m_annotationModel, m_formFieldModel, m_redactionModel, kSidecarVersion);
+    return m_sidecarService->currentState(m_annotationModel, m_formFieldModel, m_redactionModel);
 }
 
 void PdfDocumentController::restoreDocumentState(const QJsonObject &state)
@@ -64,27 +51,13 @@ void PdfDocumentController::restoreDocumentState(const QJsonObject &state)
 
 void PdfDocumentController::resetHistory()
 {
-    m_historySnapshots.clear();
-    m_historyIndex = -1;
+    m_historyService->reset();
     updateHistoryState();
 }
 
 void PdfDocumentController::recordHistorySnapshot()
 {
-    const QJsonObject snapshot = currentDocumentState();
-    if (m_historyIndex >= 0
-        && m_historyIndex < m_historySnapshots.size()
-        && m_historySnapshots.at(m_historyIndex) == snapshot) {
-        updateHistoryState();
-        return;
-    }
-
-    while (m_historySnapshots.size() > m_historyIndex + 1) {
-        m_historySnapshots.removeLast();
-    }
-
-    m_historySnapshots.append(snapshot);
-    m_historyIndex = m_historySnapshots.size() - 1;
+    m_historyService->recordSnapshot(currentDocumentState());
     updateHistoryState();
 }
 

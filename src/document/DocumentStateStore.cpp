@@ -3,6 +3,7 @@
 #include <QFile>
 #include <QJsonArray>
 #include <QJsonDocument>
+#include <QSaveFile>
 
 #include "document/AnnotationModel.h"
 #include "document/FormFieldModel.h"
@@ -141,7 +142,7 @@ bool DocumentStateStore::saveToFile(const QString &sidecarPath, const QJsonObjec
         return true;
     }
 
-    QFile file(sidecarPath);
+    QSaveFile file(sidecarPath);
     if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
         if (errorMessage) {
             *errorMessage = QStringLiteral("Sidecar-Datei konnte nicht geschrieben werden.");
@@ -152,6 +153,13 @@ bool DocumentStateStore::saveToFile(const QString &sidecarPath, const QJsonObjec
     if (file.write(QJsonDocument(root).toJson(QJsonDocument::Indented)) < 0) {
         if (errorMessage) {
             *errorMessage = QStringLiteral("Sidecar-Datei konnte nicht vollstaendig geschrieben werden.");
+        }
+        return false;
+    }
+
+    if (!file.commit()) {
+        if (errorMessage) {
+            *errorMessage = QStringLiteral("Sidecar-Datei konnte nicht atomar gespeichert werden.");
         }
         return false;
     }

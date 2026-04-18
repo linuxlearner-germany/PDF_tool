@@ -38,12 +38,17 @@ set(PDF_TOOL_SOURCES
     src/ui/PageThumbnailListModel.cpp
     src/ui/PdfView.cpp
     src/document/AnnotationModel.cpp
+    src/document/AtomicFileTransaction.cpp
+    src/document/ExportService.cpp
     src/document/FormFieldModel.cpp
+    src/document/HistoryService.cpp
+    src/document/OcrServiceController.cpp
     src/document/DocumentStateStore.cpp
     src/document/PdfDocumentController.cpp
     src/document/PdfDocumentControllerState.cpp
     src/document/PageThumbnailProvider.cpp
     src/document/RedactionModel.cpp
+    src/document/SidecarService.cpp
     src/services/OcrService.cpp
     src/rendering/PopplerAdapter.cpp
     src/operations/QPdfOperations.cpp
@@ -56,7 +61,11 @@ set(PDF_TOOL_HEADERS
     src/ui/PageThumbnailListModel.h
     src/ui/PdfView.h
     src/document/AnnotationModel.h
+    src/document/AtomicFileTransaction.h
+    src/document/ExportService.h
     src/document/FormFieldModel.h
+    src/document/HistoryService.h
+    src/document/OcrServiceController.h
     src/document/DocumentStateStore.h
     src/document/PageThumbnailProvider.h
     src/document/PdfDocumentController.h
@@ -65,6 +74,7 @@ set(PDF_TOOL_HEADERS
     src/document/RedactionModel.h
     src/document/SearchModel.h
     src/document/SelectionModel.h
+    src/document/SidecarService.h
     src/services/OcrService.h
     src/rendering/PdfRenderEngine.h
     src/rendering/PopplerAdapter.h
@@ -193,9 +203,11 @@ target_link_libraries(SearchModelTests
 qt_add_executable(DocumentStateStoreTests
     tests/DocumentStateStoreTests.cpp
     src/document/AnnotationModel.cpp
+    src/document/AtomicFileTransaction.cpp
     src/document/FormFieldModel.cpp
     src/document/RedactionModel.cpp
     src/document/DocumentStateStore.cpp
+    src/document/SidecarService.cpp
 )
 
 target_include_directories(DocumentStateStoreTests
@@ -213,12 +225,17 @@ target_link_libraries(DocumentStateStoreTests
 qt_add_executable(PdfDocumentControllerTests
     tests/PdfDocumentControllerTests.cpp
     src/document/AnnotationModel.cpp
+    src/document/AtomicFileTransaction.cpp
+    src/document/ExportService.cpp
     src/document/FormFieldModel.cpp
+    src/document/HistoryService.cpp
+    src/document/OcrServiceController.cpp
     src/document/RedactionModel.cpp
     src/document/DocumentStateStore.cpp
     src/document/PdfDocumentController.cpp
     src/document/PdfDocumentControllerState.cpp
     src/document/PageThumbnailProvider.cpp
+    src/document/SidecarService.cpp
     src/services/OcrService.cpp
     src/operations/QPdfOperations.cpp
 )
@@ -237,7 +254,66 @@ target_link_libraries(PdfDocumentControllerTests
         Qt6::Test
 )
 
+qt_add_executable(HistoryServiceTests
+    tests/HistoryServiceTests.cpp
+    src/document/HistoryService.cpp
+)
+
+target_include_directories(HistoryServiceTests
+    PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
+)
+
+target_link_libraries(HistoryServiceTests
+    PRIVATE
+        Qt6::Core
+        Qt6::Test
+)
+
+qt_add_executable(OcrServiceControllerTests
+    tests/OcrServiceControllerTests.cpp
+    src/document/OcrServiceController.cpp
+    src/services/OcrService.cpp
+)
+
+target_include_directories(OcrServiceControllerTests
+    PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
+)
+
+target_link_libraries(OcrServiceControllerTests
+    PRIVATE
+        Qt6::Concurrent
+        Qt6::Core
+        Qt6::Gui
+        Qt6::Test
+)
+
+qt_add_executable(ExportServiceTests
+    tests/ExportServiceTests.cpp
+    src/document/ExportService.cpp
+    src/document/AtomicFileTransaction.cpp
+    src/services/OcrService.cpp
+    src/operations/QPdfOperations.cpp
+)
+
+target_include_directories(ExportServiceTests
+    PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
+)
+
+target_link_libraries(ExportServiceTests
+    PRIVATE
+        Qt6::Core
+        Qt6::Gui
+        Qt6::PrintSupport
+        Qt6::Test
+)
+
 add_test(NAME RedactionModelTests COMMAND RedactionModelTests)
 add_test(NAME SearchModelTests COMMAND SearchModelTests)
 add_test(NAME DocumentStateStoreTests COMMAND DocumentStateStoreTests)
 add_test(NAME PdfDocumentControllerTests COMMAND PdfDocumentControllerTests)
+add_test(NAME HistoryServiceTests COMMAND HistoryServiceTests)
+add_test(NAME OcrServiceControllerTests COMMAND OcrServiceControllerTests)
+add_test(NAME ExportServiceTests COMMAND ExportServiceTests)

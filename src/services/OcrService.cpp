@@ -100,6 +100,16 @@ QString OcrService::availabilityError()
         : QStringLiteral("Tesseract wurde nicht gefunden. OCR ist deaktiviert, bis das Binary im PATH verfuegbar ist.");
 }
 
+CapabilityState OcrService::capabilityState()
+{
+    CapabilityState state;
+    state.available = isAvailable();
+    if (!state.available) {
+        state.error = availabilityError();
+    }
+    return state;
+}
+
 QString OcrService::recognizeImage(
     const QImage &image,
     QString *errorMessage,

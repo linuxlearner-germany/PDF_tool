@@ -13,6 +13,7 @@
 #include <QTreeWidgetItem>
 #include <QWidget>
 
+#include "document/AtomicFileTransaction.h"
 #include "document/PdfDocumentController.h"
 #include "document/PdfDocumentTypes.h"
 #include "operations/QPdfOperations.h"
@@ -354,8 +355,10 @@ QLabel *MainWindow::createStatusPill(const QString &text, const QString &objectN
 
 void MainWindow::updateCapabilityHints()
 {
-    const QString qpdfError = m_pdfOperations->availabilityError();
-    const QString ocrError = m_documentController->ocrAvailabilityError();
+    const CapabilityState exportCapability = m_documentController->exportCapabilityState();
+    const CapabilityState ocrCapability = m_documentController->ocrCapabilityState();
+    const QString qpdfError = exportCapability.error;
+    const QString ocrError = ocrCapability.error;
 
     const QString nativeExportTip = qpdfError.isEmpty()
         ? QStringLiteral("Bearbeitetes PDF mit nativen PDF-Aenderungen exportieren.")
@@ -406,25 +409,23 @@ bool MainWindow::applyPageOrderChange(const QVector<int> &newOrder, int reopened
     const QByteArray ownerPassword = m_documentController->currentOwnerPassword();
     const QByteArray userPassword = m_documentController->currentUserPassword();
     const QString tempPath = documentPath + QStringLiteral(".pageops.tmp.pdf");
-    const QString backupPath = documentPath + QStringLiteral(".pageops.bak.pdf");
 
     QFile::remove(tempPath);
-    QFile::remove(backupPath);
+    QFile::remove(documentPath + QStringLiteral(".pageops.bak.pdf"));
     if (!m_pdfOperations->reorderPages(documentPath, tempPath, newOrder, userPassword)) {
         showError(m_pdfOperations->lastError());
         return false;
     }
 
     QString replaceError;
-    if (!replaceDocumentWithBackup(tempPath, documentPath, backupPath, replaceError)) {
+    if (!AtomicFileTransaction::replaceFile(tempPath, documentPath, QStringLiteral(".pageops.bak.pdf"), &replaceError)) {
         QFile::remove(tempPath);
         showError(replaceError);
         return false;
     }
 
     if (!m_documentController->remapPageOrder(newOrder)) {
-        QString restoreError;
-        restoreDocumentFromBackup(documentPath, backupPath, restoreError);
+        QString restoreError = QStringLiteral("Originaldatei wurde bereits ersetzt und muss manuell geprueft werden.");
         m_documentController->openDocument(documentPath, ownerPassword, userPassword);
         showError(QStringLiteral("Begleitdaten konnten nicht auf die neue Seitenreihenfolge angepasst werden.%1")
                       .arg(restoreError.isEmpty() ? QString() : QStringLiteral("\nRollback: %1").arg(restoreError)));
@@ -433,66 +434,19 @@ bool MainWindow::applyPageOrderChange(const QVector<int> &newOrder, int reopened
 
     if (!m_documentController->openDocument(documentPath, ownerPassword, userPassword)) {
         const QString reopenError = m_documentController->lastError();
-        QString restoreError;
-        restoreDocumentFromBackup(documentPath, backupPath, restoreError);
+        const QString restoreError = QStringLiteral("Originaldatei wurde bereits ersetzt und muss manuell geprueft werden.");
         m_documentController->openDocument(documentPath, ownerPassword, userPassword);
         showError(QStringLiteral("Die aktualisierte PDF konnte nicht erneut geladen werden: %1%2")
                       .arg(reopenError)
                       .arg(restoreError.isEmpty() ? QString() : QStringLiteral("\nRollback: %1").arg(restoreError)));
         return false;
     }
-
-    QFile::remove(backupPath);
     refreshNavigationPanels();
     updateWindowTitle();
     if (reopenedPageIndex >= 0 && reopenedPageIndex < m_documentController->pageCount()) {
         m_documentController->goToPage(reopenedPageIndex);
     }
     statusBar()->showMessage(successMessage, 4000);
-    return true;
-}
-
-bool MainWindow::replaceDocumentWithBackup(
-    const QString &stagedPath,
-    const QString &documentPath,
-    const QString &backupPath,
-    QString &errorMessage) const
-{
-    errorMessage.clear();
-
-    if (QFile::exists(documentPath) && !QFile::rename(documentPath, backupPath)) {
-        errorMessage = QStringLiteral("Originaldatei konnte nicht gesichert werden.");
-        return false;
-    }
-
-    if (!QFile::rename(stagedPath, documentPath)) {
-        if (QFile::exists(backupPath)) {
-            QFile::rename(backupPath, documentPath);
-        }
-        errorMessage = QStringLiteral("Temporaere PDF-Datei konnte nicht uebernommen werden.");
-        return false;
-    }
-
-    return true;
-}
-
-bool MainWindow::restoreDocumentFromBackup(
-    const QString &documentPath,
-    const QString &backupPath,
-    QString &errorMessage) const
-{
-    errorMessage.clear();
-
-    if (!QFile::exists(backupPath)) {
-        return true;
-    }
-
-    QFile::remove(documentPath);
-    if (!QFile::rename(backupPath, documentPath)) {
-        errorMessage = QStringLiteral("Originaldatei konnte aus dem Backup nicht wiederhergestellt werden.");
-        return false;
-    }
-
     return true;
 }
 

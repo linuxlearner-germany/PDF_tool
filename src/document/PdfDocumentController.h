@@ -3,7 +3,6 @@
 #include <memory>
 
 #include <QByteArray>
-#include <QFutureWatcher>
 #include <QObject>
 #include <QColor>
 #include <QImage>
@@ -25,12 +24,10 @@
 class PdfRenderEngine;
 class QPrinter;
 class PageThumbnailProvider;
-
-struct OcrJobResult
-{
-    QString text;
-    QString errorMessage;
-};
+class ExportService;
+class HistoryService;
+class OcrServiceController;
+class SidecarService;
 
 class PdfDocumentController : public QObject
 {
@@ -63,6 +60,7 @@ public:
     bool isOcrAvailable() const;
     bool isOcrBusy() const;
     QString ocrAvailabilityError() const;
+    CapabilityState ocrCapabilityState() const;
     bool hasSearchResults() const;
     QString searchQuery() const;
     bool requiresPassword() const;
@@ -73,6 +71,7 @@ public:
     bool exportRedactedPdf(const QString &outputFile);
     bool supportsNativePdfEditExport() const;
     QString nativePdfEditExportError() const;
+    CapabilityState exportCapabilityState() const;
     bool hasSelectedOverlay() const;
     PdfAnnotationKind selectedAnnotationKind() const;
     QColor selectedAnnotationColor() const;
@@ -170,7 +169,6 @@ signals:
     void historyStateChanged(bool canUndo, bool canRedo);
 
 private:
-    void startOcrJob(const QImage &image, const QString &busyMessage, const QString &resultTitle, int pageSegmentationMode);
     QString annotationSidecarPath() const;
     void loadSidecarState();
     void saveSidecarState() const;
@@ -200,6 +198,10 @@ private:
     AnnotationModel m_annotationModel;
     FormFieldModel m_formFieldModel;
     RedactionModel m_redactionModel;
+    std::unique_ptr<ExportService> m_exportService;
+    std::unique_ptr<HistoryService> m_historyService;
+    std::unique_ptr<OcrServiceController> m_ocrServiceController;
+    std::unique_ptr<SidecarService> m_sidecarService;
     QVector<PdfFormField> m_baseFormFields;
     std::unique_ptr<PageThumbnailProvider> m_thumbnailProvider;
     QImage m_currentPageImage;
@@ -210,7 +212,4 @@ private:
     double m_zoomFactor {1.0};
     QByteArray m_currentOwnerPassword;
     QByteArray m_currentUserPassword;
-    QVector<QJsonObject> m_historySnapshots;
-    int m_historyIndex {-1};
-    QFutureWatcher<OcrJobResult> *m_ocrWatcher {nullptr};
 };

@@ -41,6 +41,16 @@ QString QPdfOperations::availabilityError() const
 #endif
 }
 
+CapabilityState QPdfOperations::capabilityState() const
+{
+    CapabilityState state;
+    state.available = isAvailable();
+    if (!state.available) {
+        state.error = availabilityError();
+    }
+    return state;
+}
+
 QString QPdfOperations::lastError() const
 {
     return m_lastError;

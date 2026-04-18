@@ -17,6 +17,12 @@ struct PdfDocumentMetadata
     int pageCount {0};
 };
 
+struct CapabilityState
+{
+    bool available {false};
+    QString error;
+};
+
 struct PdfOutlineEntry
 {
     QString title;

@@ -103,15 +103,6 @@ private:
     QWidget *createToolbarSpacer(int width = 16) const;
     QLabel *createStatusPill(const QString &text, const QString &objectName) const;
     bool applyPageOrderChange(const QVector<int> &newOrder, int reopenedPageIndex, const QString &successMessage);
-    bool replaceDocumentWithBackup(
-        const QString &stagedPath,
-        const QString &documentPath,
-        const QString &backupPath,
-        QString &errorMessage) const;
-    bool restoreDocumentFromBackup(
-        const QString &documentPath,
-        const QString &backupPath,
-        QString &errorMessage) const;
     void refreshNavigationPanels();
     void refreshInspector();
     void populateOutlineTree(const QVector<PdfOutlineEntry> &entries, QTreeWidgetItem *parentItem = nullptr);
