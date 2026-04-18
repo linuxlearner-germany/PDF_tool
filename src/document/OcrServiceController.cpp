@@ -42,6 +42,11 @@ int OcrServiceController::activeRequestId() const
     return m_activeRequestId;
 }
 
+void OcrServiceController::invalidateActiveSession()
+{
+    m_activeRequestId = m_nextRequestId++;
+}
+
 int OcrServiceController::startRequest(const OcrRequest &request)
 {
     const CapabilityState state = capabilityState();

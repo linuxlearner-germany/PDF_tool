@@ -33,7 +33,16 @@
 
 - `MainWindowSupport.cpp` enthaelt Dialog- und Helperlogik.
 - `MainWindowState.cpp` enthaelt Theme-, Status- und Kontextmenu-Logik.
+- `MainWindowFileWorkflows.cpp` enthaelt Datei-, Export-, Druck- und OCR-Workflows.
+- `MainWindowDialogWorkflows.cpp` enthaelt dialoggetriebene UI-Workflows.
 - `PdfDocumentControllerState.cpp` enthaelt Persistenz-, Historien- und Render-Helfer.
+- `PdfDocumentControllerSelection.cpp` kapselt Selection-/Overlay-Orchestrierung.
+- `PdfDocumentControllerSearch.cpp` kapselt Search-Orchestrierung.
+
+### OCR-Haertung
+
+- Dokumentwechsel invalidiert jetzt aktive OCR-Sessions.
+- Veraltete Ergebnisse werden nach `openDocument()` und `closeDocument()` ignoriert.
 
 ### Tests
 
@@ -45,3 +54,4 @@
   - `SearchModelTests`
   - `DocumentStateStoreTests`
   - `PdfDocumentControllerTests`
+- `OcrServiceControllerTests` prueft jetzt auch Session-Invalidierung bei pending OCR.

@@ -3,12 +3,12 @@
 ## Priority A
 
 1. `PdfDocumentController` fachlich weiter verkleinern
-   - Selection-/Overlay-Orchestrierung separieren
-   - Search-Orchestrierung separieren
+   - Selection-/Overlay-Orchestrierung in echten Services statt nur Split-Units
+   - Search-Orchestrierung in echten Services statt nur Split-Units
 
 2. OCR weiter haerten
    - optional echte Cancellation
-   - Session-Guard bei Dokumentwechsel
+   - Session-Guard bei Dokumentwechsel ist umgesetzt, jetzt nur noch harte Cancellation offen
 
 3. Dateiersetzung noch robuster machen
    - atomische Replace-Pfade fuer mehr Workflows
@@ -28,9 +28,9 @@
 ## Priority C
 
 6. MainWindow weiter zerlegen
-   - File-Workflows
-   - Export-Workflows
-   - Dialog-Workflows
+   - Menue-/Action-Wiring
+   - Toolbar-/Dock-Aufbau
+   - verbleibende UI-Orchestrierung
 
 7. Packaging / Startfaehigkeit
    - Qt6/CMake-Prefix sauber dokumentieren

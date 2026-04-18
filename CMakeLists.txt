@@ -33,6 +33,8 @@ qt_standard_project_setup()
 set(PDF_TOOL_SOURCES
     src/main.cpp
     src/ui/MainWindow.cpp
+    src/ui/MainWindowDialogWorkflows.cpp
+    src/ui/MainWindowFileWorkflows.cpp
     src/ui/MainWindowState.cpp
     src/ui/MainWindowSupport.cpp
     src/ui/PageThumbnailListModel.cpp
@@ -45,6 +47,8 @@ set(PDF_TOOL_SOURCES
     src/document/OcrServiceController.cpp
     src/document/DocumentStateStore.cpp
     src/document/PdfDocumentController.cpp
+    src/document/PdfDocumentControllerSearch.cpp
+    src/document/PdfDocumentControllerSelection.cpp
     src/document/PdfDocumentControllerState.cpp
     src/document/PageThumbnailProvider.cpp
     src/document/RedactionModel.cpp
@@ -79,7 +83,6 @@ set(PDF_TOOL_HEADERS
     src/rendering/PdfRenderEngine.h
     src/rendering/PopplerAdapter.h
     src/operations/QPdfOperations.h
-        src/ui/MainWindow.cpp
 )
 
 qt_add_executable(PDFTool
@@ -233,6 +236,8 @@ qt_add_executable(PdfDocumentControllerTests
     src/document/RedactionModel.cpp
     src/document/DocumentStateStore.cpp
     src/document/PdfDocumentController.cpp
+    src/document/PdfDocumentControllerSearch.cpp
+    src/document/PdfDocumentControllerSelection.cpp
     src/document/PdfDocumentControllerState.cpp
     src/document/PageThumbnailProvider.cpp
     src/document/SidecarService.cpp

@@ -38,6 +38,7 @@ public:
     CapabilityState capabilityState() const;
     bool isBusy() const;
     int activeRequestId() const;
+    void invalidateActiveSession();
     int startRequest(const OcrRequest &request);
 
 signals:

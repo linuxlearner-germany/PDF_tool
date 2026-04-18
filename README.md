@@ -1,169 +1,78 @@
-# 🧩 PDFTool
+# PDFTool
+
+PDFTool is a local-first PDF desktop application for Linux. The current focus is document viewing, annotation, OCR, redaction and export workflows without cloud dependencies.
 
 ![PDFTool Screenshot](images/Screenshot_with_dokument.png)
 
-<p align="center">
-  <b>Local-first PDF editor for Linux – OCR, Annotation, Redaction</b>
-</p>
+## Overview
 
-<p align="center">
-  <img src="https://skillicons.dev/icons?i=cpp,qt,cmake,linux,bash,git" />
-</p>
+- Qt 6 desktop UI
+- Poppler-based PDF rendering
+- Tesseract-based OCR at runtime
+- qpdf-backed native PDF operations when available
+- Sidecar-backed document state persistence
 
----
+## Current Architecture
 
-## 🚀 Overview
+- `MainWindow` owns the desktop shell and action wiring.
+- `PdfDocumentController` is the document orchestrator for UI-facing state.
+- `ExportService`, `HistoryService`, `SidecarService` and `OcrServiceController` handle specialized workflows.
+- `AtomicFileTransaction` and `QSaveFile` protect sensitive write paths.
 
-PDFTool is a Linux desktop application designed for working with PDF files in a **local-first workflow**.
+Internal target architecture is documented in [architecture.md](architecture.md).
 
-Unlike simple viewers, it focuses on real document workflows such as annotation, OCR, redaction and export — all processed locally without cloud dependency.
+## Dependencies
 
-This project is built as a **practical C++/Qt desktop application**, using modern tooling and a structured architecture.
+Required:
 
----
-
-## 🎯 Project Goals
-
-- Provide a complete PDF workflow on Linux  
-- Enable annotation and document interaction  
-- Support OCR-based text extraction  
-- Offer redaction and export functionality  
-- Keep all processing local (privacy-first)  
-- Build a maintainable and scalable C++/Qt codebase  
-- Apply real-world desktop software engineering practices  
-
----
-
-## ⚙️ Tech Stack
-
-<p>
-  <img src="https://skillicons.dev/icons?i=cpp,qt,cmake,linux,bash,git" />
-</p>
-
-- **C++** – Core application logic  
-- **Qt 6** – GUI framework  
-- **CMake** – Build system  
-- **Linux (Debian)** – Target platform  
-- **Poppler** – PDF rendering  
-- **Tesseract** – OCR engine  
-- **qpdf** – PDF processing  
-
----
-
-## ✨ Capabilities
-
-- 📄 Open and navigate PDF documents  
-- 🔎 Search within documents  
-- ✏️ Annotation and editing workflows  
-- 🔍 OCR (via Tesseract)  
-- 🔒 Redaction / black-out functionality  
-- 📤 Export processed documents  
-- 🖥️ Native Linux desktop integration  
-- 📦 Debian package distribution (.deb)  
-
----
-
-## 📸 Screenshots
-
-### 📄 With document loaded
-
-![With Document](images/Screenshot_with_dokument.png)
-
----
-
-### 🧩 Empty workspace
-
-![Without Document](images/Screenshot_without_dokument.png)
-
----
-
-## 🧠 Key Features
-
-### 📖 PDF Viewing & Navigation
-- Load and display PDF documents  
-- Navigate pages efficiently  
-- Desktop-focused UI workflow  
-
-### ✏️ Annotation & Editing
-- Interactive document tools  
-- GUI-based editing workflows  
-- Visual document interaction  
-
-### 🔍 OCR Support
-- Powered by **Tesseract**  
-- Extract text from scanned PDFs  
-- Page and selection-based OCR  
-
-### 🔒 Redaction
-- Hide sensitive data  
-- Black-out areas in documents  
-- Export redacted versions  
-
-### 🔐 Local-First Design
-- No cloud dependency  
-- Full control over data  
-- Privacy-focused workflow  
-
----
-
-## 🏗️ Architecture
-
-### Core Components
-
-- **Qt 6** → UI Layer  
-- **Poppler** → PDF rendering  
-- **Tesseract** → OCR  
-- **qpdf** → PDF processing  
-
----
-
-### Workflow
-
----
-
-### Layers
-
-1. **UI Layer** – user interaction  
-2. **Document Layer** – PDF handling  
-3. **Processing Layer** – OCR, editing, redaction  
-4. **Output Layer** – export  
-
----
-
-## 🛠️ Development Environment
-
-- **IDE:** CLion (JetBrains)  
-- **Build System:** CMake  
-- **Platform:** Linux (Debian)  
-- **Language:** C++  
-- **Framework:** Qt 6  
-
-CLion is used for:
-
-- CMake integration  
-- Debugging  
-- Refactoring  
-- Managing larger C++ projects  
-
----
-
-## ⚙️ Requirements
-
-- Linux (Debian recommended)  
-- Qt 6  
-- Poppler  
-- CMake  
-- C++ compiler  
+- Qt 6 (`Core`, `Gui`, `Widgets`, `PrintSupport`, `Concurrent`, `Test`)
+- Poppler Qt6
+- libjpeg
+- zlib
+- CMake 3.21+
+- C++17 compiler
 
 Optional:
 
-- Tesseract  
-- qpdf  
+- `qpdf` for native PDF operation paths
+- `tesseract` binary for OCR
 
----
+## Local Build
 
-## 📦 Installation (.deb)
+The project expects a working Qt 6 CMake package on the machine. If `cmake -S . -B cmake-build-debug` fails with `Qt6Config.cmake` not found, set a Qt prefix explicitly.
+
+Example:
 
 ```bash
-sudo dpkg -i dist/pdf-tool_0.1.0_amd64.deb
-sudo apt-get install -f
+cmake -S . -B cmake-build-debug -DCMAKE_PREFIX_PATH=/path/to/Qt/6.x/gcc_64
+cmake --build cmake-build-debug
+ctest --test-dir cmake-build-debug --output-on-failure
+```
+
+For systems with distro Qt packages, `Qt6_DIR` or `CMAKE_PREFIX_PATH` must point at the directory containing `Qt6Config.cmake`.
+
+The repository also checks `.localdeps/sysroot/.../pkgconfig` automatically when present.
+
+## Local Start
+
+Built binary:
+
+```bash
+./cmake-build-debug/PDFTool
+```
+
+Existing packaged artifact in this repository:
+
+```bash
+./installer/dist/pdf-tool_0.1.0_amd64/opt/pdftool/bin/PDFTool
+```
+
+That packaged binary was started locally in this workspace on 2026-04-18 and produced no immediate stderr output before being terminated again.
+
+## Documentation
+
+- External overview: `README.md`
+- Internal target picture: [architecture.md](architecture.md)
+- Technical change log: [changelog.md](changelog.md)
+- Next steps: [roadmap.md](roadmap.md)
+- Verification notes: [mind.md](mind.md)

@@ -11,7 +11,8 @@
 - `PdfDocumentController`
   - haelt UI-relevanten Dokumentzustand
   - verbindet Services mit Qt-Signalen
-  - steuert Seitennavigation, Auswahl und Overlay-Emission
+  - steuert Seitennavigation und Dokumentlebenszyklus
+  - delegiert Search- und Selection-Flows in eigene Kompilierungseinheiten
 
 ### Services
 
@@ -19,6 +20,7 @@
   - asynchrone OCR-Ausfuehrung
   - `requestId` / `activeRequestId`
   - stale-result Schutz
+  - Session-Invalidierung bei Dokumentwechsel
 
 - `ExportService`
   - Print
@@ -57,6 +59,6 @@ struct CapabilityState {
 
 ## Noch nicht vollendet
 
-- `MainWindow` orchestriert weiterhin viele Datei- und Workflow-Pfade.
-- `PdfDocumentController` kennt noch zu viel von Annotation-, Selection- und Search-Zustand.
+- `MainWindow` ist weiter entlastet, aber Menue-/Action-Wiring liegt noch zentral in `MainWindow.cpp`.
+- `PdfDocumentController` ist schlanker, kennt aber weiterhin Annotation- und Overlay-Zustand direkt.
 - Export- und OCR-Service sind ausgelagert, aber noch nicht maximal granular.
