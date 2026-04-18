@@ -33,11 +33,15 @@ qt_standard_project_setup()
 set(PDF_TOOL_SOURCES
     src/main.cpp
     src/ui/MainWindow.cpp
+    src/ui/MainWindowState.cpp
+    src/ui/MainWindowSupport.cpp
     src/ui/PageThumbnailListModel.cpp
     src/ui/PdfView.cpp
     src/document/AnnotationModel.cpp
     src/document/FormFieldModel.cpp
+    src/document/DocumentStateStore.cpp
     src/document/PdfDocumentController.cpp
+    src/document/PdfDocumentControllerState.cpp
     src/document/PageThumbnailProvider.cpp
     src/document/RedactionModel.cpp
     src/services/OcrService.cpp
@@ -48,10 +52,12 @@ set(PDF_TOOL_SOURCES
 
 set(PDF_TOOL_HEADERS
     src/ui/MainWindow.h
+    src/ui/MainWindowSupport.h
     src/ui/PageThumbnailListModel.h
     src/ui/PdfView.h
     src/document/AnnotationModel.h
     src/document/FormFieldModel.h
+    src/document/DocumentStateStore.h
     src/document/PageThumbnailProvider.h
     src/document/PdfDocumentController.h
     src/document/PdfDocumentTypes.h
@@ -63,6 +69,7 @@ set(PDF_TOOL_HEADERS
     src/rendering/PdfRenderEngine.h
     src/rendering/PopplerAdapter.h
     src/operations/QPdfOperations.h
+        src/ui/MainWindow.cpp
 )
 
 qt_add_executable(PDFTool
@@ -149,3 +156,88 @@ target_link_libraries(FormFieldModelTests
 
 add_test(NAME AnnotationModelTests COMMAND AnnotationModelTests)
 add_test(NAME FormFieldModelTests COMMAND FormFieldModelTests)
+
+qt_add_executable(RedactionModelTests
+    tests/RedactionModelTests.cpp
+    src/document/RedactionModel.cpp
+)
+
+target_include_directories(RedactionModelTests
+    PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
+)
+
+target_link_libraries(RedactionModelTests
+    PRIVATE
+        Qt6::Core
+        Qt6::Gui
+        Qt6::Test
+)
+
+qt_add_executable(SearchModelTests
+    tests/SearchModelTests.cpp
+)
+
+target_include_directories(SearchModelTests
+    PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
+)
+
+target_link_libraries(SearchModelTests
+    PRIVATE
+        Qt6::Core
+        Qt6::Gui
+        Qt6::Test
+)
+
+qt_add_executable(DocumentStateStoreTests
+    tests/DocumentStateStoreTests.cpp
+    src/document/AnnotationModel.cpp
+    src/document/FormFieldModel.cpp
+    src/document/RedactionModel.cpp
+    src/document/DocumentStateStore.cpp
+)
+
+target_include_directories(DocumentStateStoreTests
+    PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
+)
+
+target_link_libraries(DocumentStateStoreTests
+    PRIVATE
+        Qt6::Core
+        Qt6::Gui
+        Qt6::Test
+)
+
+qt_add_executable(PdfDocumentControllerTests
+    tests/PdfDocumentControllerTests.cpp
+    src/document/AnnotationModel.cpp
+    src/document/FormFieldModel.cpp
+    src/document/RedactionModel.cpp
+    src/document/DocumentStateStore.cpp
+    src/document/PdfDocumentController.cpp
+    src/document/PdfDocumentControllerState.cpp
+    src/document/PageThumbnailProvider.cpp
+    src/services/OcrService.cpp
+    src/operations/QPdfOperations.cpp
+)
+
+target_include_directories(PdfDocumentControllerTests
+    PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
+)
+
+target_link_libraries(PdfDocumentControllerTests
+    PRIVATE
+        Qt6::Concurrent
+        Qt6::Core
+        Qt6::Gui
+        Qt6::PrintSupport
+        Qt6::Test
+)
+
+add_test(NAME RedactionModelTests COMMAND RedactionModelTests)
+add_test(NAME SearchModelTests COMMAND SearchModelTests)
+add_test(NAME DocumentStateStoreTests COMMAND DocumentStateStoreTests)
+add_test(NAME PdfDocumentControllerTests COMMAND PdfDocumentControllerTests)
